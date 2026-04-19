@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuevo Pedido</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .card-header { text-align: center; margin-bottom: 1.8rem; }
+    .card-header h1 { font-size: 1.5rem; color: #1a202c; }
+    .card-header p  { color: #718096; font-size: .9rem; margin-top: .3rem; }
+
+    .section-title {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #4a5568;
+      margin: 1.4rem 0 .6rem;
+      padding-bottom: .3rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: .35rem;
+    }
+    label .req { color: #e53e3e; margin-left: 2px; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: .55rem .8rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: .95rem;
+      color: #2d3748;
+      background: #fff;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #4299e1;
+      box-shadow: 0 0 0 3px rgba(66,153,225,.15);
+    }
+    input.error, select.error { border-color: #e53e3e; }
+    .msg-error { color: #e53e3e; font-size: .78rem; margin-top: .25rem; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    /* Tabla de items */
+    .items-table-wrap { overflow-x: auto; margin-bottom: .5rem; }
+    .items-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .items-table thead tr { background: #ebf8ff; }
+    .items-table th {
+      padding: .55rem .75rem;
+      text-align: left;
+      font-size: .73rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #2c5282;
+      white-space: nowrap;
+    }
+    .items-table td { padding: .45rem .5rem; border-top: 1px solid #e2e8f0; vertical-align: top; }
+    .items-table td input, .items-table td select {
+      padding: .4rem .6rem;
+      font-size: .88rem;
+      border-radius: 6px;
+    }
+    .items-table td input[readonly] { background: #f7fafc; color: #4a5568; cursor: default; }
+    .col-producto { min-width: 220px; }
+    .col-qty      { width: 80px; }
+    .col-precio   { width: 110px; }
+    .col-subtotal { width: 110px; }
+    .col-del      { width: 40px; text-align: center; }
+
+    .precios-ref {
+      margin-top: .3rem;
+      font-size: .72rem;
+      color: #718096;
+      line-height: 1.5;
+    }
+    .precios-ref span { margin-right: .5rem; white-space: nowrap; }
+    .precio-activo { color: #2b6cb0; font-weight: 700; }
+    .desc-prod {
+      margin-top: .25rem;
+      font-size: .75rem;
+      color: #4a5568;
+      border-left: 3px solid #bee3f8;
+      padding-left: .5rem;
+      line-height: 1.4;
+    }
+
+    .btn-add-item {
+      background: none;
+      border: 1.5px dashed #4299e1;
+      color: #3182ce;
+      border-radius: 8px;
+      padding: .45rem 1rem;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: .3rem;
+      transition: background .15s;
+    }
+    .btn-add-item:hover { background: #ebf8ff; }
+
+    .btn-del {
+      background: none;
+      border: none;
+      color: #e53e3e;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: .2rem .4rem;
+      border-radius: 4px;
+    }
+    .btn-del:hover { background: #fff5f5; }
+    .btn-del:disabled { color: #cbd5e0; cursor: not-allowed; }
+
+    /* Resumen */
+    .resumen {
+      background: #ebf8ff;
+      border: 1.5px solid #bee3f8;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      margin-top: 1.4rem;
+    }
+    .resumen h3 { font-size: .85rem; color: #2c5282; margin-bottom: .6rem; font-weight: 700; }
+    .resumen-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: .9rem;
+      color: #2d3748;
+      padding: .2rem 0;
+    }
+    .resumen-row.total {
+      border-top: 1.5px solid #bee3f8;
+      margin-top: .4rem;
+      padding-top: .5rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #2b6cb0;
+    }
+    .resumen-row.descuento-row { color: #e53e3e; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .75rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 1.6rem;
+      transition: background .2s, opacity .2s;
+    }
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #2b6cb0; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .alert {
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      font-size: .9rem;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .alert-success { background: #c6f6d5; color: #22543d; }
+    .alert-error   { background: #fed7d7; color: #742a2a; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="card">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h1>Nuevo Pedido</h1>
+        <p>Completa el formulario para registrar un pedido</p>
+      </div>
+      <div style="display:flex;gap:.75rem;align-items:center;font-size:.85rem">
+        <a v-if="currentUser?.rol === 'vendedor'" href="mis_ventas.html" style="color:#2b6cb0;text-decoration:none;font-weight:600">📊 Mis ventas</a>
+        <a v-else href="backoffice.html" style="color:#2b6cb0;text-decoration:none;font-weight:600">← Backoffice</a>
+        <span style="color:#4a5568">{{ currentUser?.nombre }}</span>
+        <button type="button" @click="logout" style="background:#e2e8f0;border:none;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem">Salir</button>
+      </div>
+    </div>
+
+    <form @submit.prevent="enviar">
+
+      <!-- EMPRESA / VENDEDOR -->
+      <p class="section-title">Empresa / Vendedor</p>
+
+      <div class="row2">
+        <div class="form-group">
+          <label>Empresa <span class="req">*</span></label>
+          <select v-model="form.empresa_id" @change="onEmpresaChange" :class="{ error: errores.empresa_id }">
+            <option value="">— Selecciona empresa —</option>
+            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+          </select>
+          <p class="msg-error" v-if="errores.empresa_id">{{ errores.empresa_id }}</p>
+        </div>
+        <div class="form-group">
+          <label>Vendedor <span class="req">*</span></label>
+          <select v-model="form.vendedor_id" :class="{ error: errores.vendedor_id }" :disabled="!form.empresa_id || currentUser?.rol === 'vendedor'">
+            <option :value="null">— Selecciona vendedor —</option>
+            <option v-for="v in vendedoresEmpresa" :key="v.id" :value="v.id">{{ v.nombre_completo }}</option>
+          </select>
+          <p class="msg-error" v-if="errores.vendedor_id">{{ errores.vendedor_id }}</p>
+        </div>
+      </div>
+
+      <!-- CLIENTE -->
+      <p class="section-title">Datos del Cliente</p>
+
+      <div class="form-group">
+        <label>Nombre completo <span class="req">*</span></label>
+        <input v-model="form.nombre_cliente" placeholder="Nombre y apellidos" :class="{ error: errores.nombre_cliente }" />
+        <p class="msg-error" v-if="errores.nombre_cliente">{{ errores.nombre_cliente }}</p>
+      </div>
+
+      <div class="row2">
+        <div class="form-group">
+          <label>DNI <span class="req">*</span></label>
+          <input v-model="form.dni" maxlength="10" placeholder="8 a 10 dígitos"
+            :class="{ error: errores.dni }" @input="validarDni" />
+          <p class="msg-error" v-if="errores.dni">{{ errores.dni }}</p>
+        </div>
+        <div class="form-group">
+          <label>Teléfono <span class="req">*</span></label>
+          <input v-model="form.telefono" maxlength="9" placeholder="9XXXXXXXX"
+            :class="{ error: errores.telefono }" @input="validarTelefono" />
+          <p class="msg-error" v-if="errores.telefono">{{ errores.telefono }}</p>
+        </div>
+      </div>
+
+      <!-- PRODUCTOS -->
+      <p class="section-title">Productos del Pedido</p>
+
+      <div class="items-table-wrap">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th class="col-producto">Producto</th>
+              <th class="col-qty">Cantidad</th>
+              <th class="col-precio">Precio unit.</th>
+              <th class="col-subtotal">Subtotal</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, idx) in items" :key="idx">
+              <td class="col-producto">
+                <select v-model="item.producto_id" @change="onProductoChange(idx)" :disabled="!form.empresa_id">
+                  <option value="">— Producto —</option>
+                  <option v-for="p in productos" :key="p.id" :value="p.id">
+                    {{ p.nombre }} (stock: {{ p.stock - p.stock_comprometido }})
+                  </option>
+                </select>
+                <div class="precios-ref" v-if="item.productoData">
+                  <span :class="{ 'precio-activo': item.cantidad <= 2 }">P0: S/{{ fmt(item.productoData.precio_venta) }}</span>
+                  <span :class="{ 'precio-activo': item.cantidad >= 3 && item.cantidad <= 6 }">P1: S/{{ fmt(item.productoData.precio_venta_1) }}</span>
+                  <span :class="{ 'precio-activo': item.cantidad >= 7 && item.cantidad <= 12 }">P2: S/{{ fmt(item.productoData.precio_venta_2) }}</span>
+                  <span :class="{ 'precio-activo': item.cantidad >= 13 }">P3: S/{{ fmt(item.productoData.precio_venta_3) }}</span>
+                </div>
+                <div class="desc-prod" v-if="item.productoData && item.productoData.descripcion">
+                  {{ item.productoData.descripcion }}
+                </div>
+              </td>
+              <td class="col-qty">
+                <input type="number" v-model.number="item.cantidad" min="1"
+                  :max="item.stockDisponible || 9999"
+                  @input="onCantidadChange(idx)" />
+                <p class="msg-error" v-if="item.error">{{ item.error }}</p>
+              </td>
+              <td class="col-precio">
+                <input type="text" :value="'S/ ' + fmt(item.precio_unitario)" readonly />
+              </td>
+              <td class="col-subtotal">
+                <input type="text" :value="'S/ ' + fmt(item.subtotal)" readonly />
+              </td>
+              <td class="col-del">
+                <button type="button" class="btn-del" @click="eliminarItem(idx)" :disabled="items.length === 1">✕</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" class="btn-add-item" @click="agregarItem" :disabled="!form.empresa_id">
+        + Agregar producto
+      </button>
+
+      <!-- ENVÍO Y PAGOS -->
+      <p class="section-title">Destino y Pagos</p>
+
+      <div class="form-group">
+        <label>Agencia Shalom destino <span class="req">*</span></label>
+        <select v-model="form.agencia_id" :class="{ error: errores.agencia_id }">
+          <option value="">— Selecciona ciudad —</option>
+          <option v-for="a in agencias" :key="a.id" :value="a.id">{{ a.ciudad }}</option>
+        </select>
+        <p class="msg-error" v-if="errores.agencia_id">{{ errores.agencia_id }}</p>
+      </div>
+
+      <div class="row3">
+        <div class="form-group">
+          <label>Separación (S/)</label>
+          <input v-model.number="form.separacion" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Costo de envío (S/)</label>
+          <input v-model.number="form.costo_envio" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Descuento total (S/)</label>
+          <input v-model.number="form.descuento" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Observaciones</label>
+        <textarea v-model="form.detalle_observacion" rows="2" placeholder="Opcional..."></textarea>
+      </div>
+
+      <!-- RESUMEN -->
+      <div class="resumen" v-if="subtotalItems > 0">
+        <h3>Resumen del pedido</h3>
+        <div class="resumen-row" v-for="item in itemsValidos" :key="item.producto_id + '-' + item.cantidad">
+          <span style="font-size:.85rem">{{ item.productoData ? item.productoData.nombre : 'Producto' }} × {{ item.cantidad }}</span>
+          <span>S/ {{ fmt(item.subtotal) }}</span>
+        </div>
+        <div class="resumen-row" style="border-top:1px solid #bee3f8;margin-top:.3rem;padding-top:.3rem">
+          <span>Subtotal productos</span>
+          <span>S/ {{ fmt(subtotalItems) }}</span>
+        </div>
+        <div class="resumen-row">
+          <span>Costo de envío</span>
+          <span>S/ {{ fmt(form.costo_envio || 0) }}</span>
+        </div>
+        <div class="resumen-row descuento-row" v-if="form.descuento > 0">
+          <span>Descuento</span>
+          <span>− S/ {{ fmt(form.descuento) }}</span>
+        </div>
+        <div class="resumen-row">
+          <span>Separación</span>
+          <span>− S/ {{ fmt(form.separacion || 0) }}</span>
+        </div>
+        <div class="resumen-row total">
+          <span>Resta a pagar</span>
+          <span>S/ {{ fmt(restaPagar) }}</span>
+        </div>
+      </div>
+
+      <!-- ALERTAS -->
+      <div class="alert alert-success" v-if="exito">
+        ✅ Pedido #{{ pedidoCreado }} registrado exitosamente.
+      </div>
+      <div class="alert alert-error" v-if="errorApi">
+        ⚠️ {{ errorApi }}
+      </div>
+
+      <button class="btn btn-primary" type="submit" :disabled="enviando || !formularioValido">
+        <span class="spinner" v-if="enviando"></span>
+        {{ enviando ? 'Registrando...' : 'Registrar Pedido' }}
+      </button>
+
+    </form>
+  </div>
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed } = Vue
+
+function seleccionarPrecio(producto, cantidad) {
+  if (cantidad <= 2)  return parseFloat(producto.precio_venta)
+  if (cantidad <= 6)  return parseFloat(producto.precio_venta_1)
+  if (cantidad <= 12) return parseFloat(producto.precio_venta_2)
+  return parseFloat(producto.precio_venta_3)
+}
+
+function itemVacio() {
+  return { producto_id: '', cantidad: 1, precio_unitario: 0, subtotal: 0, stockDisponible: 0, productoData: null, error: '' }
+}
+
+createApp({
+  setup() {
+    const empresas          = ref([])
+    const productos         = ref([])
+    const agencias          = ref([])
+    const vendedoresEmpresa = ref([])
+    const enviando          = ref(false)
+    const exito             = ref(false)
+    const pedidoCreado      = ref(null)
+    const errorApi          = ref('')
+
+    const items = ref([itemVacio()])
+
+    const form = reactive({
+      empresa_id:          '',
+      vendedor_id:         null,
+      nombre_cliente:      '',
+      dni:                 '',
+      telefono:            '',
+      agencia_id:          '',
+      separacion:          0,
+      costo_envio:         0,
+      descuento:           0,
+      detalle_observacion: '',
+    })
+
+    const errores = reactive({
+      empresa_id: '', vendedor_id: '', nombre_cliente: '',
+      dni: '', telefono: '', agencia_id: '',
+    })
+
+    // ── Catálogos iniciales ────────────────────────────────────
+    async function cargarEmpresasYAgencias() {
+      const user = Auth.require()
+      if (!user) return
+      currentUser.value = user
+
+      const [empRes, agRes] = await Promise.all([
+        Auth.fetch(`${API}/catalogos/empresas`),
+        Auth.fetch(`${API}/catalogos/agencias`),
+      ])
+      empresas.value = await empRes.json()
+      agencias.value = await agRes.json()
+
+      // Si el usuario es vendedor: preseleccionar empresa y vendedor
+      if (user.rol === 'vendedor' && user.vendedor_id) {
+        const vendRes = await Auth.fetch(`${API}/catalogos/vendedores?todos=true`)
+        const todosVendedores = vendRes ? await vendRes.json() : []
+        const miVendedor = todosVendedores.find(v => v.id === user.vendedor_id)
+        if (miVendedor) {
+          form.empresa_id  = miVendedor.empresa_id
+          await onEmpresaChange()
+          form.vendedor_id = user.vendedor_id
+        }
+      }
+    }
+
+    // ── Cambio de empresa ──────────────────────────────────────
+    async function onEmpresaChange() {
+      errores.empresa_id = ''
+      form.vendedor_id   = null
+      productos.value    = []
+      items.value        = [itemVacio()]
+
+      if (!form.empresa_id) return
+
+      const [vendRes, prodRes] = await Promise.all([
+        fetch(`${API}/catalogos/vendedores?empresa_id=${form.empresa_id}`),
+        fetch(`${API}/catalogos/productos?empresa_id=${form.empresa_id}`),
+      ])
+      vendedoresEmpresa.value = await vendRes.json()
+      productos.value         = await prodRes.json()
+    }
+
+    // ── Cambio de producto en una fila ─────────────────────────
+    function onProductoChange(idx) {
+      const item = items.value[idx]
+      const prod = productos.value.find(p => p.id === item.producto_id)
+      if (!prod) {
+        item.productoData    = null
+        item.precio_unitario = 0
+        item.subtotal        = 0
+        item.stockDisponible = 0
+        return
+      }
+      item.productoData    = prod
+      item.stockDisponible = Math.max(0, prod.stock - prod.stock_comprometido)
+      item.cantidad        = 1
+      item.error           = ''
+      recalcularPrecio(idx)
+    }
+
+    // ── Cambio de cantidad en una fila ─────────────────────────
+    function onCantidadChange(idx) {
+      const item = items.value[idx]
+      if (!item.productoData) return
+      if (!item.cantidad || item.cantidad < 1) {
+        item.error = 'Cantidad inválida'; return
+      }
+      if (item.cantidad > item.stockDisponible) {
+        item.error = `Stock disponible: ${item.stockDisponible}`
+      } else {
+        item.error = ''
+      }
+      recalcularPrecio(idx)
+    }
+
+    function recalcularPrecio(idx) {
+      const item = items.value[idx]
+      if (!item.productoData) return
+      item.precio_unitario = seleccionarPrecio(item.productoData, item.cantidad)
+      item.subtotal        = item.precio_unitario * item.cantidad
+    }
+
+    // ── Gestión de filas ───────────────────────────────────────
+    function agregarItem()       { items.value.push(itemVacio()) }
+    function eliminarItem(idx)   { if (items.value.length > 1) items.value.splice(idx, 1) }
+
+    // ── Validaciones ───────────────────────────────────────────
+    function validarDni() {
+      errores.dni = /^\d{8,10}$/.test(form.dni) ? '' : 'Debe tener entre 8 y 10 dígitos'
+    }
+    function validarTelefono() {
+      errores.telefono = /^9\d{8}$/.test(form.telefono) ? '' : 'Debe tener 9 dígitos y empezar con 9'
+    }
+
+    // ── Computed ───────────────────────────────────────────────
+    const itemsValidos = computed(() =>
+      items.value.filter(i => i.producto_id && i.cantidad > 0 && !i.error)
+    )
+
+    const subtotalItems = computed(() =>
+      itemsValidos.value.reduce((s, i) => s + i.subtotal, 0)
+    )
+
+    const restaPagar = computed(() => {
+      const total = subtotalItems.value + (form.costo_envio || 0)
+      return Math.max(0, total - (form.descuento || 0) - (form.separacion || 0))
+    })
+
+    const formularioValido = computed(() => {
+      const camposBase =
+        form.empresa_id &&
+        form.vendedor_id &&
+        form.nombre_cliente.trim() &&
+        /^\d{8,10}$/.test(form.dni) &&
+        /^9\d{8}$/.test(form.telefono) &&
+        form.agencia_id
+      const tieneItems = itemsValidos.value.length > 0
+      const sinErrores = items.value.every(i => !i.error)
+      return camposBase && tieneItems && sinErrores
+    })
+
+    // ── Envío ──────────────────────────────────────────────────
+    async function enviar() {
+      exito.value    = false
+      errorApi.value = ''
+      enviando.value = true
+
+      try {
+        const payload = {
+          empresa_id:          form.empresa_id,
+          vendedor_id:         form.vendedor_id,
+          nombre_cliente:      form.nombre_cliente.trim(),
+          dni:                 form.dni,
+          telefono:            form.telefono,
+          agencia_id:          form.agencia_id,
+          separacion:          form.separacion || 0,
+          costo_envio:         form.costo_envio || 0,
+          descuento:           form.descuento || 0,
+          detalle_observacion: form.detalle_observacion || null,
+          detalles: itemsValidos.value.map(i => ({
+            producto_id: i.producto_id,
+            cantidad:    i.cantidad,
+          })),
+        }
+
+        const res  = await fetch(`${API}/pedidos/`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        })
+        const data = await res.json()
+
+        if (!res.ok) {
+          errorApi.value = data.detail || 'Error al registrar el pedido'
+        } else {
+          pedidoCreado.value = data.id
+          exito.value        = true
+          resetForm()
+        }
+      } catch {
+        errorApi.value = 'No se pudo conectar con el servidor'
+      } finally {
+        enviando.value = false
+      }
+    }
+
+    function resetForm() {
+      form.empresa_id          = ''
+      form.vendedor_id         = null
+      form.nombre_cliente      = ''
+      form.dni                 = ''
+      form.telefono            = ''
+      form.agencia_id          = ''
+      form.separacion          = 0
+      form.costo_envio         = 0
+      form.descuento           = 0
+      form.detalle_observacion = ''
+      items.value              = [itemVacio()]
+      productos.value          = []
+      vendedoresEmpresa.value  = []
+    }
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    const currentUser = ref(null)
+    function logout() { Auth.logout() }
+
+    cargarEmpresasYAgencias()
+
+    return {
+      empresas, productos, agencias, vendedoresEmpresa,
+      form, errores, items,
+      subtotalItems, itemsValidos, restaPagar, formularioValido,
+      enviando, exito, pedidoCreado, errorApi, currentUser,
+      onEmpresaChange, onProductoChange, onCantidadChange,
+      agregarItem, eliminarItem,
+      validarDni, validarTelefono,
+      enviar, fmt, logout,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

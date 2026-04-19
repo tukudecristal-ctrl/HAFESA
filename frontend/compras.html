@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrar Compra</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .card-title { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 1.2rem; padding-bottom: .5rem; border-bottom: 2px solid #e2e8f0; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label { display: block; font-size: .82rem; font-weight: 600; color: #4a5568; margin-bottom: .3rem; }
+    label .req { color: #e53e3e; }
+    input, select, textarea {
+      width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e0;
+      border-radius: 7px; font-size: .92rem; color: #2d3748; background: #fff;
+    }
+    input:focus, select:focus { outline: none; border-color: #4299e1; }
+    input[type="number"] { text-align: right; }
+
+    /* Tabla de items */
+    .items-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .items-table th {
+      background: #ebf8ff; padding: .6rem .8rem; text-align: left;
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; color: #2c5282;
+    }
+    .items-table td { padding: .5rem .5rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    .items-table td input, .items-table td select {
+      padding: .38rem .5rem; font-size: .88rem;
+    }
+    .items-table td .subtotal { font-weight: 700; color: #2b6cb0; text-align: right; }
+
+    .btn { padding: .5rem 1rem; border: none; border-radius: 7px; font-size: .88rem; font-weight: 700; cursor: pointer; transition: background .15s; }
+    .btn-add     { background: #ebf8ff; color: #2b6cb0; border: 1.5px dashed #bee3f8; width: 100%; margin-top: .5rem; padding: .6rem; }
+    .btn-add:hover { background: #bee3f8; }
+    .btn-remove  { background: #fff5f5; color: #e53e3e; border: 1px solid #fed7d7; padding: .3rem .6rem; font-size: .8rem; }
+    .btn-remove:hover { background: #fed7d7; }
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #2b6cb0; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+
+    .totales {
+      background: #f7fafc; border-radius: 8px; padding: 1rem 1.2rem;
+      display: flex; flex-direction: column; align-items: flex-end; gap: .3rem;
+    }
+    .totales .fila { display: flex; gap: 2rem; justify-content: flex-end; font-size: .9rem; color: #4a5568; }
+    .totales .fila span:last-child { width: 100px; text-align: right; font-weight: 600; }
+    .totales .gran-total { font-size: 1.1rem; font-weight: 800; color: #2b6cb0; border-top: 2px solid #bee3f8; padding-top: .5rem; margin-top: .3rem; }
+
+    .alert { border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; margin-top: 1rem; }
+    .alert-success { background: #c6f6d5; color: #22543d; }
+    .alert-error   { background: #fed7d7; color: #742a2a; }
+
+    .acciones { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1rem; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>🛒 Registrar Compra</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+      <a href="crud_proveedores.html">Proveedores</a>
+      <a href="crud_productos.html">Productos</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+
+    <!-- Datos de la compra -->
+    <div class="card">
+      <div class="card-title">Datos de la Compra</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Empresa <span class="req">*</span></label>
+          <select v-model="form.empresa_id" @change="cargarProductos">
+            <option value="">— Selecciona —</option>
+            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha de compra <span class="req">*</span></label>
+          <input type="date" v-model="form.fecha_compra" />
+        </div>
+        <div class="form-group full">
+          <label>Proveedor</label>
+          <select v-model="form.proveedor_id">
+            <option :value="null">— Sin proveedor —</option>
+            <option v-for="p in proveedores" :key="p.id" :value="p.id">
+              {{ p.nombre }} <span v-if="p.contacto">· {{ p.contacto }}</span>
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Costo transporte (S/)</label>
+          <input type="number" v-model.number="form.costo_transporte" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Costo impuesto (S/)</label>
+          <input type="number" v-model.number="form.costo_impuesto" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Otros costos (S/)</label>
+          <input type="number" v-model.number="form.otros_costos" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group full">
+          <label>Observaciones</label>
+          <textarea v-model="form.observaciones" rows="2" placeholder="Opcional..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="card">
+      <div class="card-title">Productos Comprados</div>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:40%">Producto</th>
+            <th style="width:15%">Cantidad</th>
+            <th style="width:20%">Costo unitario</th>
+            <th style="width:20%">Subtotal</th>
+            <th style="width:5%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, i) in items" :key="i">
+            <td>
+              <select v-model="item.producto_id" :disabled="!form.empresa_id">
+                <option value="">— Producto —</option>
+                <option v-for="p in productos" :key="p.id" :value="p.id">
+                  {{ p.nombre }} (stock: {{ p.stock }})
+                </option>
+              </select>
+            </td>
+            <td><input type="number" v-model.number="item.cantidad" min="1" /></td>
+            <td><input type="number" v-model.number="item.costo_unitario" min="0.01" step="0.01" /></td>
+            <td><div class="subtotal">S/ {{ fmt(item.cantidad * item.costo_unitario) }}</div></td>
+            <td>
+              <button class="btn btn-remove" @click="quitarItem(i)" :disabled="items.length === 1">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <button class="btn btn-add" @click="agregarItem">+ Agregar producto</button>
+
+      <!-- Totales -->
+      <div class="totales" style="margin-top:1rem">
+        <div class="fila"><span>Subtotal items</span><span>S/ {{ fmt(subtotalItems) }}</span></div>
+        <div class="fila"><span>Transporte</span><span>S/ {{ fmt(form.costo_transporte || 0) }}</span></div>
+        <div class="fila"><span>Impuesto</span><span>S/ {{ fmt(form.costo_impuesto || 0) }}</span></div>
+        <div class="fila"><span>Otros</span><span>S/ {{ fmt(form.otros_costos || 0) }}</span></div>
+        <div class="fila gran-total"><span>TOTAL</span><span>S/ {{ fmt(totalGeneral) }}</span></div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="alert alert-success" v-if="exito">✅ Compra #{{ compraCreada }} registrada. Stock actualizado.</div>
+    <div class="alert alert-error"   v-if="errorApi">⚠️ {{ errorApi }}</div>
+
+    <!-- Acciones -->
+    <div class="acciones">
+      <button class="btn btn-secondary" @click="resetForm">Limpiar</button>
+      <button class="btn btn-primary" @click="guardar" :disabled="!formularioValido || enviando">
+        <span class="spinner" v-if="enviando"></span>
+        {{ enviando ? 'Guardando...' : 'Guardar Compra' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const empresas    = ref([])
+    const productos   = ref([])
+    const proveedores = ref([])
+    const enviando    = ref(false)
+    const exito     = ref(false)
+    const compraCreada = ref(null)
+    const errorApi  = ref('')
+
+    const form = reactive({
+      empresa_id:       '',
+      fecha_compra:     new Date().toISOString().slice(0, 10),
+      proveedor_id:     null,
+      costo_transporte: 0,
+      costo_impuesto:   0,
+      otros_costos:     0,
+      observaciones:    '',
+    })
+
+    const items = ref([{ producto_id: '', cantidad: 1, costo_unitario: 0 }])
+
+    const subtotalItems = computed(() =>
+      items.value.reduce((acc, i) => acc + (i.cantidad || 0) * (i.costo_unitario || 0), 0)
+    )
+    const totalGeneral = computed(() =>
+      subtotalItems.value +
+      (form.costo_transporte || 0) +
+      (form.costo_impuesto   || 0) +
+      (form.otros_costos     || 0)
+    )
+    const formularioValido = computed(() =>
+      form.empresa_id &&
+      form.fecha_compra &&
+      items.value.every(i => i.producto_id && i.cantidad > 0 && i.costo_unitario > 0)
+    )
+
+    async function cargarProductos() {
+      productos.value = []
+      items.value = [{ producto_id: '', cantidad: 1, costo_unitario: 0 }]
+      if (!form.empresa_id) return
+      const res = await fetch(`${API}/catalogos/productos?empresa_id=${form.empresa_id}`)
+      productos.value = await res.json()
+    }
+
+    function agregarItem()  { items.value.push({ producto_id: '', cantidad: 1, costo_unitario: 0 }) }
+    function quitarItem(i)  { if (items.value.length > 1) items.value.splice(i, 1) }
+
+    async function guardar() {
+      exito.value    = false
+      errorApi.value = ''
+      enviando.value = true
+      try {
+        const payload = {
+          empresa_id:       form.empresa_id,
+          proveedor_id:     form.proveedor_id || null,
+          fecha_compra:     form.fecha_compra,
+          costo_transporte: form.costo_transporte || 0,
+          costo_impuesto:   form.costo_impuesto   || 0,
+          otros_costos:     form.otros_costos     || 0,
+          observaciones:    form.observaciones    || null,
+          detalles: items.value.map(i => ({
+            producto_id:    i.producto_id,
+            cantidad:       i.cantidad,
+            costo_unitario: i.costo_unitario,
+          })),
+        }
+        const res  = await fetch(`${API}/compras/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const data = await res.json()
+        if (!res.ok) { errorApi.value = data.detail || 'Error al guardar'; return }
+        compraCreada.value = data.id
+        exito.value = true
+        resetForm()
+        await cargarProductos()
+      } catch { errorApi.value = 'No se pudo conectar con el servidor' }
+      finally   { enviando.value = false }
+    }
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador', 'logistica'])) return
+      const [empRes, provRes] = await Promise.all([
+        Auth.fetch(`${API}/catalogos/empresas`),
+        Auth.fetch(`${API}/catalogos/proveedores`),
+      ])
+      empresas.value    = await empRes.json()
+      proveedores.value = await provRes.json()
+    })
+
+    function resetForm() {
+      form.proveedor_id     = null
+      form.costo_transporte = 0
+      form.costo_impuesto   = 0
+      form.otros_costos     = 0
+      form.observaciones    = ''
+      items.value = [{ producto_id: '', cantidad: 1, costo_unitario: 0 }]
+    }
+
+    return {
+      empresas, productos, proveedores, form, items,
+      subtotalItems, totalGeneral, formularioValido,
+      enviando, exito, compraCreada, errorApi,
+      cargarProductos, agregarItem, quitarItem, guardar, resetForm, fmt,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hafesa — Ingresar</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 60%, #2c7a7b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+    }
+
+    .brand {
+      background: linear-gradient(135deg, #1a365d, #2b6cb0);
+      padding: 2.2rem 2rem 1.8rem;
+      text-align: center;
+      color: #fff;
+    }
+    .brand-logo {
+      font-size: 3rem;
+      margin-bottom: .4rem;
+    }
+    .brand-name {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .brand-sub {
+      font-size: .82rem;
+      color: #bee3f8;
+      margin-top: .25rem;
+      letter-spacing: .04em;
+    }
+
+    .form-body {
+      padding: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 700;
+      color: #4a5568;
+      margin-bottom: .4rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .form-group input {
+      width: 100%;
+      padding: .7rem 1rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color .15s;
+      background: #f7fafc;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #3182ce;
+      background: #fff;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: .85rem;
+      background: linear-gradient(135deg, #2b6cb0, #3182ce);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .03em;
+      transition: opacity .15s;
+      margin-top: .4rem;
+    }
+    .btn-login:hover:not(:disabled) { opacity: .9; }
+    .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+
+    .msg-error {
+      background: #fff5f5;
+      border: 1px solid #feb2b2;
+      color: #c53030;
+      border-radius: 8px;
+      padding: .7rem 1rem;
+      font-size: .85rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer-txt {
+      text-align: center;
+      font-size: .75rem;
+      color: #a0aec0;
+      padding: 0 2rem 1.5rem;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="card">
+
+    <div class="brand">
+      <div class="brand-logo">🏭</div>
+      <div class="brand-name">Hafesa</div>
+      <div class="brand-sub">Sistema de Gestión de Ventas</div>
+    </div>
+
+    <div class="form-body">
+      <p class="msg-error" v-if="error">{{ error }}</p>
+
+      <div class="form-group">
+        <label>DNI de acceso</label>
+        <input
+          v-model="dni"
+          type="text"
+          inputmode="numeric"
+          maxlength="8"
+          placeholder="12345678"
+          @keyup.enter="login"
+          autofocus
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input
+          v-model="password"
+          type="password"
+          placeholder="••••••••"
+          @keyup.enter="login"
+        />
+      </div>
+
+      <button class="btn-login" @click="login" :disabled="cargando">
+        <span class="spinner" v-if="cargando"></span>
+        {{ cargando ? 'Verificando...' : 'Ingresar' }}
+      </button>
+    </div>
+
+    <div class="footer-txt">Hafesa &copy; {{ new Date().getFullYear() }}</div>
+
+  </div>
+</div>
+
+<script>
+const { createApp, ref, onMounted } = Vue
+
+createApp({
+  setup() {
+    const dni      = ref('')
+    const password = ref('')
+    const error    = ref('')
+    const cargando = ref(false)
+
+    // Si ya hay sesión válida, redirigir directo
+    onMounted(() => {
+      const user = Auth.getUser()
+      const token = Auth.getToken()
+      if (token && user) {
+        if (user.rol === 'vendedor') location.href = 'formulario_pedido.html'
+        else location.href = 'backoffice.html'
+      }
+    })
+
+    async function login() {
+      error.value = ''
+      if (!dni.value.trim() || !password.value) { error.value = 'Ingresa tu DNI y contraseña'; return }
+      if (!/^\d{8}$/.test(dni.value)) { error.value = 'El DNI debe tener exactamente 8 dígitos'; return }
+
+      cargando.value = true
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dni: dni.value, password: password.value }),
+        })
+        const data = await res.json()
+        if (!res.ok) { error.value = data.detail || 'Error al ingresar'; return }
+
+        Auth.save(data)
+
+        if (data.rol === 'vendedor')       location.href = 'formulario_pedido.html'
+        else                               location.href = 'backoffice.html'
+      } catch {
+        error.value = 'Error de conexión con el servidor'
+      } finally {
+        cargando.value = false
+      }
+    }
+
+    return { dni, password, error, cargando, login }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

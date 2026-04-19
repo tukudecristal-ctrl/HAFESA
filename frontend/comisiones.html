@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comisiones — VERDE</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+
+    /* Stats */
+    .stats { display: flex; gap: .75rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .stat-card { background: #fff; border-radius: 10px; padding: .75rem 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,.07); flex: 1; min-width: 140px; }
+    .stat-card .icono { font-size: 1.4rem; margin-bottom: .2rem; }
+    .stat-card .num   { font-size: 1.5rem; font-weight: 800; color: #2b6cb0; }
+    .stat-card .lbl   { font-size: .75rem; color: #718096; margin-top: .1rem; }
+
+    /* Toolbar */
+    .toolbar { display: flex; gap: .75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .toolbar select { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; min-width: 180px; }
+
+    /* Card / tabla */
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #ebf8ff; }
+    th { padding: .7rem 1rem; text-align: left; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #2c5282; white-space: nowrap; }
+    td { padding: .65rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:hover td { background: #f7fafc; }
+
+    .empty  { text-align: center; padding: 2.5rem; color: #a0aec0; }
+    .loading { text-align: center; padding: 2rem; color: #718096; }
+
+    /* Botones */
+    .btn { padding: .45rem 1rem; border: none; border-radius: 7px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .btn-primary  { background: #3182ce; color: #fff; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-success  { background: #38a169; color: #fff; }
+    .btn-success:hover { background: #2f855a; }
+    .btn-secondary{ background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn-print    { background: #718096; color: #fff; }
+    .btn-print:hover { background: #4a5568; }
+    .btn-sm { padding: .28rem .65rem; font-size: .78rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Detalle vendedor */
+    .detalle-header {
+      display: flex; align-items: center; gap: 1rem;
+      background: #fff; border-radius: 10px;
+      padding: 1rem 1.2rem; margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      flex-wrap: wrap;
+    }
+    .detalle-header .vendedor-info h2 { font-size: 1.1rem; color: #1a202c; }
+    .detalle-header .vendedor-info p  { font-size: .85rem; color: #718096; margin-top: .15rem; }
+    .pct-badge {
+      background: #ebf8ff; border: 1.5px solid #bee3f8;
+      color: #2c5282; font-weight: 700; font-size: .9rem;
+      padding: .35rem .85rem; border-radius: 20px;
+      margin-left: auto;
+    }
+
+    /* Consolidado */
+    .consolidado {
+      background: #f7fafc; border-top: 2px solid #e2e8f0;
+      padding: .9rem 1rem;
+      display: flex; justify-content: flex-end; gap: 2rem;
+      font-size: .9rem;
+    }
+    .consolidado .item { text-align: right; }
+    .consolidado .item .lbl { font-size: .75rem; color: #718096; text-transform: uppercase; letter-spacing: .04em; }
+    .consolidado .item .val { font-size: 1.05rem; font-weight: 800; color: #2b6cb0; margin-top: .1rem; }
+    .consolidado .item.comision .val { color: #38a169; }
+
+    /* Acciones detalle */
+    .acciones-detalle {
+      display: flex; gap: .75rem; margin-top: 1rem;
+      flex-wrap: wrap; align-items: center;
+    }
+    .acciones-detalle .spacer { flex: 1; }
+
+    /* Modal pago */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal { background: #fff; border-radius: 12px; padding: 1.8rem; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+    .modal h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: .83rem; font-weight: 600; color: #4a5568; margin-bottom: .3rem; }
+    .form-group input { width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .92rem; }
+    .form-group input:focus { outline: none; border-color: #4299e1; }
+    .modal-resumen { background: #f7fafc; border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1rem; font-size: .88rem; color: #4a5568; }
+    .modal-resumen strong { color: #2b6cb0; }
+    .modal-acciones { display: flex; gap: .75rem; justify-content: flex-end; }
+    .msg-error { color: #e53e3e; font-size: .8rem; margin-top: .4rem; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+
+    /* ── PRINT ── */
+    @media print {
+      header, .no-print { display: none !important; }
+      body { background: #fff; padding: 0; }
+      .container { padding: 0; max-width: 100%; }
+      .card { box-shadow: none; border: 1px solid #ccc; }
+      .detalle-header { box-shadow: none; border: 1px solid #ccc; }
+      .print-title { display: block !important; }
+    }
+    .print-title { display: none; font-size: 1rem; font-weight: 700; color: #1a202c; margin-bottom: .5rem; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header class="no-print">
+    <h1>💰 Comisiones de Vendedores</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+      <a href="crud_vendedores.html">Vendedores</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+
+    <!-- ── VISTA RESUMEN ── -->
+    <template v-if="!vendedorSeleccionado">
+
+      <!-- Stats globales -->
+      <div class="stats no-print">
+        <div class="stat-card">
+          <div class="icono">👥</div>
+          <div class="num">{{ resumen.length }}</div>
+          <div class="lbl">Vendedores con comisión pendiente</div>
+        </div>
+        <div class="stat-card">
+          <div class="icono">📦</div>
+          <div class="num">{{ totalPedidos }}</div>
+          <div class="lbl">Pedidos pendientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="icono">💵</div>
+          <div class="num">S/ {{ fmt(totalVentas) }}</div>
+          <div class="lbl">Ventas netas totales</div>
+        </div>
+        <div class="stat-card">
+          <div class="icono">💰</div>
+          <div class="num" style="color:#38a169">S/ {{ fmt(totalComisiones) }}</div>
+          <div class="lbl">Total comisiones a pagar</div>
+        </div>
+      </div>
+
+      <!-- Filtro empresa -->
+      <div class="toolbar no-print">
+        <select v-model="filtroEmpresa" @change="cargarResumen">
+          <option value="">Todas las empresas</option>
+          <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+        </select>
+        <span style="font-size:.82rem;color:#718096">Pedidos entregados con comisión pendiente de pago</span>
+      </div>
+
+      <!-- Tabla resumen -->
+      <div class="card">
+        <div class="loading" v-if="cargando">Cargando...</div>
+        <table v-else-if="resumen.length">
+          <thead>
+            <tr>
+              <th>Vendedor</th>
+              <th>Empresa</th>
+              <th>Comisión %</th>
+              <th>Pedidos</th>
+              <th>Ventas netas</th>
+              <th>Comisión pendiente</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="v in resumen" :key="v.vendedor_id">
+              <td><strong>{{ v.nombre_completo }}</strong></td>
+              <td>{{ v.nombre_empresa }}</td>
+              <td>{{ v.porcentaje_comision }}%</td>
+              <td>{{ v.pedidos_pendientes }}</td>
+              <td>S/ {{ fmt(v.ventas_netas) }}</td>
+              <td><strong style="color:#38a169">S/ {{ fmt(v.comision_pendiente) }}</strong></td>
+              <td>
+                <button class="btn btn-primary btn-sm" @click="verDetalle(v)">Ver detalle →</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="empty" v-else>No hay comisiones pendientes de pago.</div>
+      </div>
+
+    </template>
+
+    <!-- ── VISTA DETALLE VENDEDOR ── -->
+    <template v-else>
+
+      <!-- Header vendedor -->
+      <div class="print-title">
+        Comisiones pendientes — {{ vendedorSeleccionado.nombre_completo }} ({{ vendedorSeleccionado.nombre_empresa }})
+      </div>
+
+      <div class="detalle-header">
+        <button class="btn btn-secondary btn-sm no-print" @click="volverResumen">← Volver</button>
+        <div class="vendedor-info">
+          <h2>{{ vendedorSeleccionado.nombre_completo }}</h2>
+          <p>{{ vendedorSeleccionado.nombre_empresa }}</p>
+        </div>
+        <div class="pct-badge no-print">Comisión: {{ vendedorSeleccionado.porcentaje_comision }}%</div>
+      </div>
+
+      <!-- Tabla detalle -->
+      <div class="card">
+        <table v-if="detalle.length">
+          <thead>
+            <tr>
+              <th class="no-print">
+                <input type="checkbox" @change="toggleTodos" :checked="todosSeleccionados" />
+              </th>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>F. Registro</th>
+              <th>F. Entregado</th>
+              <th>Total</th>
+              <th>Descuento</th>
+              <th>Neto</th>
+              <th>Comisión</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="p in detalle" :key="p.pedido_id" :style="seleccionados.has(p.pedido_id) ? 'background:#f0fff4' : ''">
+              <td class="no-print">
+                <input type="checkbox" :checked="seleccionados.has(p.pedido_id)"
+                  @change="toggleSeleccion(p.pedido_id)" />
+              </td>
+              <td><strong>#{{ p.pedido_id }}</strong></td>
+              <td>{{ p.nombre_cliente }}</td>
+              <td>{{ fmtFecha(p.fecha_registro) }}</td>
+              <td>{{ fmtFecha(p.fecha_entrega) }}</td>
+              <td>S/ {{ fmt(p.precio_total) }}</td>
+              <td>{{ p.descuento > 0 ? '− S/ ' + fmt(p.descuento) : '—' }}</td>
+              <td>S/ {{ fmt(p.monto_neto) }}</td>
+              <td><strong style="color:#38a169">S/ {{ fmt(p.comision) }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="empty" v-else>Sin pedidos pendientes.</div>
+
+        <!-- Consolidado pie -->
+        <div class="consolidado" v-if="seleccionados.size > 0">
+          <div class="item">
+            <div class="lbl">Pedidos seleccionados</div>
+            <div class="val">{{ seleccionados.size }}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">Ventas netas</div>
+            <div class="val">S/ {{ fmt(totalNetoPie) }}</div>
+          </div>
+          <div class="item comision">
+            <div class="lbl">Comisión a pagar</div>
+            <div class="val">S/ {{ fmt(totalComisionPie) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="acciones-detalle no-print">
+        <button class="btn btn-print" @click="imprimir">🖨 Imprimir</button>
+        <div class="spacer"></div>
+        <span style="font-size:.83rem;color:#718096">{{ seleccionados.size }} pedido(s) seleccionado(s)</span>
+        <button class="btn btn-success" :disabled="seleccionados.size === 0" @click="abrirModalPago">
+          💳 Pagar seleccionados
+        </button>
+      </div>
+
+    </template>
+
+  </div>
+
+  <!-- Modal pago -->
+  <div class="overlay no-print" v-if="modalPago.visible" @click.self="modalPago.visible = false">
+    <div class="modal">
+      <h2>Registrar pago de comisión</h2>
+      <div class="modal-resumen">
+        Vendedor: <strong>{{ vendedorSeleccionado?.nombre_completo }}</strong><br/>
+        Pedidos a pagar: <strong>{{ seleccionados.size }}</strong><br/>
+        Comisión total: <strong>S/ {{ fmt(totalComisionPie) }}</strong>
+      </div>
+      <div class="form-group">
+        <label>Fecha de pago</label>
+        <input type="date" v-model="modalPago.fecha" :max="hoy" />
+      </div>
+      <p class="msg-error" v-if="modalPago.error">{{ modalPago.error }}</p>
+      <div class="modal-acciones">
+        <button class="btn btn-secondary" @click="modalPago.visible = false">Cancelar</button>
+        <button class="btn btn-success" @click="confirmarPago" :disabled="modalPago.pagando || !modalPago.fecha">
+          <span class="spinner" v-if="modalPago.pagando"></span>
+          {{ modalPago.pagando ? 'Pagando...' : 'Confirmar pago' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" v-if="toast">{{ toast }}</div>
+
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const empresas             = ref([])
+    const resumen              = ref([])
+    const detalle              = ref([])
+    const filtroEmpresa        = ref('')
+    const cargando             = ref(false)
+    const vendedorSeleccionado = ref(null)
+    const seleccionados        = ref(new Set())
+    const toast                = ref('')
+
+    const modalPago = reactive({
+      visible: false, fecha: '', error: '', pagando: false,
+    })
+
+    const hoy = new Date().toISOString().slice(0, 10)
+
+    // ── Totales resumen ────────────────────────────────────────
+    const totalPedidos    = computed(() => resumen.value.reduce((s, v) => s + v.pedidos_pendientes, 0))
+    const totalVentas     = computed(() => resumen.value.reduce((s, v) => s + parseFloat(v.ventas_netas),      0))
+    const totalComisiones = computed(() => resumen.value.reduce((s, v) => s + parseFloat(v.comision_pendiente), 0))
+
+    // ── Totales pie detalle ────────────────────────────────────
+    const detalleSeleccionado = computed(() =>
+      detalle.value.filter(p => seleccionados.value.has(p.pedido_id))
+    )
+    const totalNetoPie     = computed(() => detalleSeleccionado.value.reduce((s, p) => s + parseFloat(p.monto_neto), 0))
+    const totalComisionPie = computed(() => detalleSeleccionado.value.reduce((s, p) => s + parseFloat(p.comision),   0))
+    const todosSeleccionados = computed(() => detalle.value.length > 0 && seleccionados.value.size === detalle.value.length)
+
+    // ── Carga resumen ──────────────────────────────────────────
+    async function cargarResumen() {
+      cargando.value = true
+      const params = filtroEmpresa.value ? `?empresa_id=${filtroEmpresa.value}` : ''
+      try {
+        const res = await fetch(`${API}/comisiones/resumen${params}`)
+        resumen.value = await res.json()
+      } finally {
+        cargando.value = false
+      }
+    }
+
+    // ── Ver detalle de un vendedor ─────────────────────────────
+    async function verDetalle(vendedor) {
+      vendedorSeleccionado.value = vendedor
+      seleccionados.value = new Set()
+      const res = await fetch(`${API}/comisiones/vendedor/${vendedor.vendedor_id}`)
+      detalle.value = await res.json()
+      // Preseleccionar todos
+      seleccionados.value = new Set(detalle.value.map(p => p.pedido_id))
+    }
+
+    function volverResumen() {
+      vendedorSeleccionado.value = null
+      detalle.value = []
+      seleccionados.value = new Set()
+      cargarResumen()
+    }
+
+    // ── Selección ──────────────────────────────────────────────
+    function toggleSeleccion(id) {
+      const s = new Set(seleccionados.value)
+      s.has(id) ? s.delete(id) : s.add(id)
+      seleccionados.value = s
+    }
+
+    function toggleTodos() {
+      if (todosSeleccionados.value) {
+        seleccionados.value = new Set()
+      } else {
+        seleccionados.value = new Set(detalle.value.map(p => p.pedido_id))
+      }
+    }
+
+    // ── Imprimir ───────────────────────────────────────────────
+    function imprimir() { window.print() }
+
+    // ── Modal pago ─────────────────────────────────────────────
+    function abrirModalPago() {
+      modalPago.fecha   = hoy
+      modalPago.error   = ''
+      modalPago.visible = true
+    }
+
+    async function confirmarPago() {
+      if (!modalPago.fecha) { modalPago.error = 'Ingresa la fecha de pago'; return }
+      modalPago.pagando = true
+      modalPago.error   = ''
+      try {
+        const res = await fetch(`${API}/comisiones/pagar`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pedido_ids: Array.from(seleccionados.value),
+            fecha_pago: modalPago.fecha,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) { modalPago.error = data.detail || 'Error al registrar pago'; return }
+        modalPago.visible = false
+        mostrarToast(`✅ ${data.pagados} comisión(es) registradas al ${modalPago.fecha}`)
+        volverResumen()
+      } catch {
+        modalPago.error = 'Error de conexión'
+      } finally {
+        modalPago.pagando = false
+      }
+    }
+
+    // ── Helpers ────────────────────────────────────────────────
+    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3500) }
+
+    function fmt(n) { return parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+
+    function fmtFecha(ts) {
+      if (!ts) return '—'
+      return new Date(ts).toLocaleString('es-PE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    }
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador', 'logistica'])) return
+      const res = await Auth.fetch(`${API}/catalogos/empresas`)
+      empresas.value = await res.json()
+      await cargarResumen()
+    })
+
+    return {
+      empresas, resumen, detalle, filtroEmpresa, cargando,
+      vendedorSeleccionado, seleccionados, todosSeleccionados,
+      totalPedidos, totalVentas, totalComisiones,
+      totalNetoPie, totalComisionPie,
+      modalPago, hoy, toast,
+      cargarResumen, verDetalle, volverResumen,
+      toggleSeleccion, toggleTodos,
+      imprimir, abrirModalPago, confirmarPago,
+      fmt, fmtFecha,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

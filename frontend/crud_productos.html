@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Productos</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+
+    .toolbar { display: flex; gap: .75rem; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .toolbar select { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; }
+    .toolbar input  { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; min-width: 200px; }
+    .btn { padding: .48rem 1rem; border: none; border-radius: 7px; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .btn-primary   { background: #3182ce; color: #fff; }
+    .btn-primary:hover   { background: #2b6cb0; }
+    .btn-success   { background: #38a169; color: #fff; }
+    .btn-success:hover   { background: #2f855a; }
+    .btn-warning   { background: #d69e2e; color: #fff; }
+    .btn-warning:hover   { background: #b7791f; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn-sm { padding: .28rem .65rem; font-size: .78rem; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #ebf8ff; }
+    th { padding: .7rem 1rem; text-align: left; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #2c5282; white-space: nowrap; }
+    td { padding: .65rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:hover td { background: #f7fafc; }
+
+    .badge-activo   { background: #c6f6d5; color: #22543d; padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+    .badge-inactivo { background: #fed7d7; color: #742a2a; padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+    .stock-low  { color: #e53e3e; font-weight: 700; }
+    .stock-ok   { color: #2f855a; font-weight: 700; }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .modal { background: #fff; border-radius: 12px; padding: 1.8rem; width: 100%; max-width: 560px; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+    .precios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    .precio-label { font-size: .75rem; color: #718096; margin-bottom: .15rem; }
+    .stock-comp { background: #ebf8ff; border-radius: 6px; padding: .4rem .75rem; font-size: .88rem; color: #2c5282; font-weight: 600; margin-top: .3rem; }
+    .modal h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: .9rem; }
+    .form-group label { display: block; font-size: .82rem; font-weight: 600; color: #4a5568; margin-bottom: .28rem; }
+    .form-group label .req { color: #e53e3e; }
+    .form-group input, .form-group select { width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .92rem; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #4299e1; }
+    .modal-acciones { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.2rem; }
+    .msg-error { color: #e53e3e; font-size: .8rem; margin-top: .5rem; }
+
+    .empty { text-align: center; padding: 2.5rem; color: #a0aec0; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+
+    /* Imagen */
+    .thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer; }
+    .thumb-placeholder { width: 44px; height: 44px; border-radius: 6px; border: 1.5px dashed #cbd5e0; display: flex; align-items: center; justify-content: center; color: #cbd5e0; font-size: 1.1rem; cursor: pointer; }
+    .img-section { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: .85rem; background: #f7fafc; }
+    .img-preview { width: 100%; max-height: 220px; object-fit: contain; border-radius: 6px; display: block; margin-bottom: .65rem; }
+    .img-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    .file-label { display: inline-block; padding: .38rem .85rem; background: #ebf8ff; border: 1.5px solid #90cdf4; border-radius: 7px; font-size: .82rem; font-weight: 600; color: #2b6cb0; cursor: pointer; }
+    .file-label:hover { background: #bee3f8; }
+    .file-label input[type=file] { display: none; }
+    .btn-danger { background: #fed7d7; color: #c53030; border: none; }
+    .btn-danger:hover { background: #feb2b2; }
+
+    /* Lightbox */
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.82); display: flex; align-items: center; justify-content: center; z-index: 300; cursor: zoom-out; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>📦 Productos</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+      <a href="compras.html">Compras</a>
+      <a href="crud_empresas.html">Empresas</a>
+      <a href="crud_vendedores.html">Vendedores</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+
+    <div class="toolbar">
+      <select v-model="filtroEmpresa" @change="cargar">
+        <option value="">Todas las empresas</option>
+        <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+      </select>
+      <input v-model="busqueda" placeholder="Buscar por nombre o código..." />
+      <label style="font-size:.85rem;display:flex;align-items:center;gap:.3rem;cursor:pointer">
+        <input type="checkbox" v-model="mostrarInactivos" @change="cargar" style="width:auto" />
+        Mostrar inactivos
+      </label>
+      <button class="btn btn-success" @click="abrirNuevo" style="margin-left:auto">+ Nuevo Producto</button>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Empresa</th>
+            <th>P0 / P1 / P2 / P3</th>
+            <th>Stock / Comprometido</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in productosFiltrados" :key="p.id">
+            <td style="width:56px;padding:.4rem .6rem">
+              <img v-if="p.imagen_url" :src="p.imagen_url" class="thumb" @click="lightbox = p.imagen_url" :title="p.nombre" />
+              <div v-else class="thumb-placeholder" @click="abrirEditar(p)" title="Agregar imagen">+</div>
+            </td>
+            <td><code>{{ p.codigo }}</code></td>
+            <td>{{ p.nombre }}</td>
+            <td>{{ empresasMap[p.empresa_id] }}</td>
+            <td style="font-size:.8rem;line-height:1.6;">
+              <span>S/ {{ fmt(p.precio_venta) }}</span> /
+              <span>S/ {{ fmt(p.precio_venta_1) }}</span> /
+              <span>S/ {{ fmt(p.precio_venta_2) }}</span> /
+              <span>S/ {{ fmt(p.precio_venta_3) }}</span>
+            </td>
+            <td>
+              <span :class="p.stock <= 5 ? 'stock-low' : 'stock-ok'">{{ p.stock }}</span>
+              <span style="font-size:.75rem;color:#718096;margin-left:.3rem">({{ p.stock_comprometido }} comp.)</span>
+            </td>
+            <td><span :class="p.activo ? 'badge-activo' : 'badge-inactivo'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
+            <td>
+              <button class="btn btn-warning btn-sm" @click="abrirEditar(p)">Editar</button>
+              <button class="btn btn-sm" :class="p.activo ? 'btn-secondary' : 'btn-success'"
+                style="margin-left:.3rem" @click="toggleActivo(p)">
+                {{ p.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!productosFiltrados.length">
+            <td colspan="8" class="empty">No se encontraron productos</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" v-if="modal.visible" @click.self="cerrarModal">
+    <div class="modal">
+      <h2>{{ modal.editando ? 'Editar Producto' : 'Nuevo Producto' }}</h2>
+
+      <div class="form-group" v-if="!modal.editando">
+        <label>Código <span class="req">*</span></label>
+        <input v-model="modal.form.codigo" placeholder="Ej: LUMI-FAR-90W" />
+      </div>
+      <div class="form-group">
+        <label>Nombre <span class="req">*</span></label>
+        <input v-model="modal.form.nombre" placeholder="Nombre del producto" />
+      </div>
+      <div class="form-group">
+        <label>Descripción detallada</label>
+        <textarea v-model="modal.form.descripcion" rows="3" placeholder="Especificaciones técnicas, características, etc." style="width:100%;padding:.5rem .75rem;border:1.5px solid #cbd5e0;border-radius:7px;font-size:.92rem;resize:vertical;"></textarea>
+      </div>
+      <div class="form-group" v-if="!modal.editando">
+        <label>Empresa <span class="req">*</span></label>
+        <select v-model="modal.form.empresa_id">
+          <option value="">— Selecciona —</option>
+          <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Precio venta base — P0 (qty 1–2) <span class="req">*</span></label>
+        <input type="number" v-model.number="modal.form.precio_venta" min="0" step="0.01"
+          @input="replicarPrecioBase" />
+      </div>
+      <div class="form-group">
+        <label>Precios por volumen</label>
+        <div class="precios-grid">
+          <div>
+            <div class="precio-label">P1 — qty 3 a 6</div>
+            <input type="number" v-model.number="modal.form.precio_venta_1" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <div class="precio-label">P2 — qty 7 a 12</div>
+            <input type="number" v-model.number="modal.form.precio_venta_2" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <div class="precio-label">P3 — qty 13 o más</div>
+            <input type="number" v-model.number="modal.form.precio_venta_3" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <div class="precio-label">Comisión %</div>
+            <input type="number" v-model.number="modal.form.porcentaje_comision" min="0" max="100" step="0.01" placeholder="3.00" />
+          </div>
+        </div>
+      </div>
+      <div class="form-group" v-if="!modal.editando">
+        <label>Stock inicial</label>
+        <input type="number" v-model.number="modal.form.stock" min="0" />
+      </div>
+      <div class="stock-comp" v-if="modal.editando && modal.stockComprometido !== null">
+        Stock comprometido actual: <strong>{{ modal.stockComprometido }}</strong> unidades
+      </div>
+
+      <!-- Imagen -->
+      <div class="form-group">
+        <label>Imagen del producto</label>
+        <div class="img-section">
+          <img v-if="modal.imagenPreview" :src="modal.imagenPreview" class="img-preview" @click="lightbox = modal.imagenPreview" />
+          <div class="img-actions">
+            <label class="file-label">
+              📁 {{ modal.imagenPreview ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+              <input type="file" accept="image/jpeg,image/png,image/webp" @change="onFileChange" />
+            </label>
+            <button v-if="modal.imagenPreview && modal.editando" class="btn btn-danger btn-sm" @click="eliminarImagen">🗑 Quitar imagen</button>
+            <span v-if="modal.archivoImagen" style="font-size:.78rem;color:#718096">{{ modal.archivoImagen.name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="msg-error" v-if="modal.error">{{ modal.error }}</p>
+
+      <div class="modal-acciones">
+        <button class="btn btn-secondary" @click="cerrarModal">Cancelar</button>
+        <button class="btn btn-primary" @click="guardar" :disabled="modal.guardando">
+          <span class="spinner" v-if="modal.guardando"></span>
+          {{ modal.guardando ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" v-if="toast">{{ toast }}</div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" v-if="lightbox" @click="lightbox = null">
+    <img :src="lightbox" />
+  </div>
+
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const empresas       = ref([])
+    const empresasMap    = ref({})
+    const productos      = ref([])
+    const filtroEmpresa  = ref('')
+    const busqueda       = ref('')
+    const mostrarInactivos = ref(false)
+    const toast          = ref('')
+
+    const lightbox = ref(null)
+
+    const modal = reactive({
+      visible: false, editando: false, id: null, error: '', guardando: false,
+      stockComprometido: null,
+      imagenPreview: null, archivoImagen: null,
+      form: { codigo: '', nombre: '', empresa_id: '', precio_venta: 0, precio_venta_1: 0, precio_venta_2: 0, precio_venta_3: 0, porcentaje_comision: 3.00, stock: 0 },
+    })
+
+    const productosFiltrados = computed(() => {
+      const q = busqueda.value.toLowerCase()
+      return productos.value.filter(p =>
+        (p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
+      )
+    })
+
+    async function cargar() {
+      const params = new URLSearchParams()
+      if (filtroEmpresa.value)  params.append('empresa_id', filtroEmpresa.value)
+      if (mostrarInactivos.value) params.append('todos', 'true')
+      const res = await fetch(`${API}/catalogos/productos?${params}`)
+      productos.value = await res.json()
+    }
+
+    function abrirNuevo() {
+      modal.editando = false; modal.id = null; modal.error = ''; modal.stockComprometido = null
+      modal.imagenPreview = null; modal.archivoImagen = null
+      modal.form = { codigo: '', nombre: '', descripcion: '', empresa_id: filtroEmpresa.value || '', precio_venta: 0, precio_venta_1: 0, precio_venta_2: 0, precio_venta_3: 0, porcentaje_comision: 3.00, stock: 0 }
+      modal.visible = true
+    }
+
+    function abrirEditar(p) {
+      modal.editando = true; modal.id = p.id; modal.error = ''
+      modal.stockComprometido = p.stock_comprometido ?? 0
+      modal.imagenPreview = p.imagen_url || null
+      modal.archivoImagen = null
+      modal.form = {
+        nombre: p.nombre,
+        descripcion: p.descripcion || '',
+        precio_venta: parseFloat(p.precio_venta),
+        precio_venta_1: parseFloat(p.precio_venta_1 || 0),
+        precio_venta_2: parseFloat(p.precio_venta_2 || 0),
+        precio_venta_3: parseFloat(p.precio_venta_3 || 0),
+        porcentaje_comision: parseFloat(p.porcentaje_comision || 3),
+      }
+      modal.visible = true
+    }
+
+    function cerrarModal() { modal.visible = false; modal.archivoImagen = null; modal.imagenPreview = null }
+
+    function onFileChange(e) {
+      const file = e.target.files[0]
+      if (!file) return
+      modal.archivoImagen = file
+      modal.imagenPreview = URL.createObjectURL(file)
+    }
+
+    async function eliminarImagen() {
+      if (!modal.id) { modal.imagenPreview = null; modal.archivoImagen = null; return }
+      const res = await fetch(`${API}/catalogos/productos/${modal.id}/imagen`, { method: 'DELETE' })
+      if (res.ok) { modal.imagenPreview = null; modal.archivoImagen = null; await cargar(); mostrarToast('🗑 Imagen eliminada') }
+    }
+
+    function replicarPrecioBase() {
+      if (modal.editando) return  // en edición el usuario gestiona los precios manualmente
+      const base = modal.form.precio_venta || 0
+      if (!modal.form.precio_venta_1) modal.form.precio_venta_1 = base
+      if (!modal.form.precio_venta_2) modal.form.precio_venta_2 = base
+      if (!modal.form.precio_venta_3) modal.form.precio_venta_3 = base
+    }
+
+    async function guardar() {
+      modal.error = ''; modal.guardando = true
+      try {
+        const url    = modal.editando ? `${API}/catalogos/productos/${modal.id}` : `${API}/catalogos/productos`
+        const method = modal.editando ? 'PUT' : 'POST'
+        const res    = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(modal.form) })
+        const data   = await res.json()
+        if (!res.ok) { modal.error = data.detail || 'Error al guardar'; return }
+
+        // Subir imagen si se seleccionó una
+        if (modal.archivoImagen) {
+          const fd = new FormData()
+          fd.append('file', modal.archivoImagen)
+          const resImg = await fetch(`${API}/catalogos/productos/${data.id}/imagen`, { method: 'POST', body: fd })
+          if (!resImg.ok) { const d = await resImg.json(); mostrarToast(`⚠️ Producto guardado pero imagen falló: ${d.detail}`) }
+        }
+
+        cerrarModal()
+        await cargar()
+        mostrarToast(modal.editando ? '✅ Producto actualizado' : '✅ Producto creado')
+      } catch { modal.error = 'Error de conexión' }
+      finally   { modal.guardando = false }
+    }
+
+    async function toggleActivo(p) {
+      const res  = await fetch(`${API}/catalogos/productos/${p.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !p.activo }),
+      })
+      if (res.ok) { await cargar(); mostrarToast(`✅ Producto ${p.activo ? 'desactivado' : 'activado'}`) }
+    }
+
+    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador', 'logistica'])) return
+      const res = await Auth.fetch(`${API}/catalogos/empresas`)
+      empresas.value = await res.json()
+      empresas.value.forEach(e => empresasMap.value[e.id] = e.nombre)
+      await cargar()
+    })
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    return {
+      empresas, empresasMap, productos, productosFiltrados,
+      filtroEmpresa, busqueda, mostrarInactivos, modal, toast, lightbox,
+      cargar, abrirNuevo, abrirEditar, cerrarModal, guardar, toggleActivo, mostrarToast,
+      replicarPrecioBase, onFileChange, eliminarImagen, fmt,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

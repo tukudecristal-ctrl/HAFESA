@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PGPASSWORD='HaFeSa%402026' psql *)",
+      "Bash(PGPASSWORD='HaFeSa@2026' psql *)",
+      "Bash(grep *)"
+    ]
+  }
+}

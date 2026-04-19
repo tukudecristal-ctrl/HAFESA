@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seguimiento de Pedido</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .page { max-width: 600px; margin: 0 auto; }
+
+    /* Buscador */
+    .search-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      padding: 1.8rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .search-card h1 { font-size: 1.4rem; color: #2d3748; margin-bottom: .3rem; }
+    .search-card p  { color: #718096; font-size: .9rem; margin-bottom: 1.3rem; }
+
+    .search-tabs {
+      display: flex;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      flex: 1;
+      padding: .55rem;
+      background: #f7fafc;
+      border: none;
+      font-size: .88rem;
+      font-weight: 600;
+      color: #718096;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .tab.active { background: #3182ce; color: #fff; }
+
+    .search-row { display: flex; gap: .6rem; }
+    .search-row input {
+      flex: 1;
+      padding: .6rem .9rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: .95rem;
+      color: #2d3748;
+    }
+    .search-row input:focus { outline: none; border-color: #4299e1; }
+    .btn-buscar {
+      padding: .6rem 1.2rem;
+      background: #3182ce;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-buscar:hover:not(:disabled) { background: #2b6cb0; }
+    .btn-buscar:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Lista de resultados (búsqueda por DNI) */
+    .resultados { margin-top: .8rem; text-align: left; }
+    .resultado-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .65rem .9rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: .4rem;
+      cursor: pointer;
+      transition: background .12s;
+    }
+    .resultado-item:hover { background: #ebf8ff; border-color: #bee3f8; }
+    .resultado-item .info { font-size: .88rem; color: #2d3748; }
+    .resultado-item .fecha { font-size: .78rem; color: #718096; }
+
+    /* Card del pedido */
+    .pedido-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .pedido-header {
+      background: #2b6cb0;
+      color: #fff;
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pedido-header .num   { font-size: 1.3rem; font-weight: 900; }
+    .pedido-header .empresa { font-size: .85rem; opacity: .85; }
+
+    .pedido-info {
+      padding: 1.2rem 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .7rem 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .info-item .lbl { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #718096; margin-bottom: .15rem; }
+    .info-item .val { font-size: .92rem; color: #2d3748; font-weight: 600; }
+    .info-item .val.resta { color: #e53e3e; font-size: 1.1rem; font-weight: 800; }
+
+    /* Timeline */
+    .timeline { padding: 1.5rem; }
+    .timeline-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #4a5568; margin-bottom: 1.1rem; }
+
+    .etapa {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      margin-bottom: .2rem;
+      position: relative;
+    }
+    .etapa:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 36px;
+      width: 2px;
+      height: calc(100% + 4px);
+      background: #e2e8f0;
+      z-index: 0;
+    }
+    .etapa.completada:not(:last-child)::after { background: #48bb78; }
+
+    .etapa-icono {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      border: 2px solid transparent;
+    }
+    .etapa.completada  .etapa-icono { background: #c6f6d5; border-color: #48bb78; }
+    .etapa.en-curso    .etapa-icono { background: #bee3f8; border-color: #3182ce; animation: pulse 1.5s infinite; }
+    .etapa.pendiente   .etapa-icono { background: #f7fafc; border-color: #cbd5e0; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(49,130,206,.4); }
+      50%       { box-shadow: 0 0 0 6px rgba(49,130,206,0); }
+    }
+
+    .etapa-contenido { padding: .4rem 0 1rem; }
+    .etapa-nombre {
+      font-size: .92rem;
+      font-weight: 700;
+      color: #2d3748;
+      line-height: 1.2;
+    }
+    .etapa.pendiente .etapa-nombre { color: #a0aec0; }
+    .etapa-fecha { font-size: .8rem; color: #718096; margin-top: .15rem; }
+    .etapa-fecha.en-curso { color: #3182ce; font-weight: 600; }
+
+    .badge-estado {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .25rem .75rem;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .badge-REGISTRADO     { background: #bee3f8; color: #2c5282; }
+    .badge-EMPACADO       { background: #fefcbf; color: #744210; }
+    .badge-ROTULO_IMPRESO { background: #fbd38d; color: #7b341e; }
+    .badge-DEPOSITADO     { background: #e9d8fd; color: #44337a; }
+    .badge-ENTREGADO      { background: #c6f6d5; color: #22543d; }
+    .badge-CANCELADO      { background: #fed7d7; color: #742a2a; }
+    .etapa.cancelada .etapa-icono  { background: #fed7d7; border-color: #e53e3e; }
+    .etapa.cancelada .etapa-nombre { color: #c53030; font-weight: 700; }
+
+    .error-card {
+      background: #fff5f5;
+      border: 1.5px solid #fed7d7;
+      border-radius: 10px;
+      padding: 1.2rem;
+      text-align: center;
+      color: #c53030;
+      font-size: .95rem;
+    }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #cbd5e0; border-top-color: #3182ce;
+      border-radius: 50%; animation: spin .7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-volver {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: #3182ce;
+      text-decoration: none;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .btn-volver:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="page">
+
+    <!-- Buscador -->
+    <div class="search-card">
+      <h1>🔍 Seguimiento de Pedido</h1>
+      <p>Consulta el estado de tu pedido en tiempo real</p>
+
+      <div class="search-tabs">
+        <button class="tab" :class="{ active: modo === 'id'  }" @click="modo = 'id';  limpiar()">Por N° de Pedido</button>
+        <button class="tab" :class="{ active: modo === 'dni' }" @click="modo = 'dni'; limpiar()">Por DNI del Cliente</button>
+      </div>
+
+      <div class="search-row">
+        <input
+          v-if="modo === 'id'"
+          v-model="query"
+          type="number"
+          placeholder="Ingresa el número de pedido"
+          @keyup.enter="buscar"
+        />
+        <input
+          v-else
+          v-model="query"
+          maxlength="10"
+          placeholder="Ingresa el DNI (10 dígitos)"
+          @keyup.enter="buscar"
+        />
+        <button class="btn-buscar" @click="buscar" :disabled="!query || buscando">
+          <span class="spinner" v-if="buscando"></span>
+          {{ buscando ? '...' : 'Buscar' }}
+        </button>
+      </div>
+
+      <!-- Resultados múltiples (DNI) -->
+      <div class="resultados" v-if="resultadosDni.length > 1">
+        <p style="font-size:.82rem;color:#718096;margin-bottom:.5rem">Se encontraron {{ resultadosDni.length }} pedidos. Selecciona uno:</p>
+        <div
+          class="resultado-item"
+          v-for="p in resultadosDni"
+          :key="p.id"
+          @click="cargarSeguimiento(p.id)"
+        >
+          <div class="info">
+            <strong>Pedido #{{ p.id }}</strong> —
+            <span :class="`badge-estado badge-${p.estado}`">{{ p.estado.replace('_',' ') }}</span>
+          </div>
+          <div class="fecha">{{ fmtFecha(p.fecha_registro) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-card" v-if="error">⚠️ {{ error }}</div>
+
+    <!-- Seguimiento -->
+    <div v-if="seguimiento">
+      <button class="btn-volver" @click="limpiarSeguimiento">← Nueva búsqueda</button>
+
+      <!-- Cabecera del pedido -->
+      <div class="pedido-card">
+        <div class="pedido-header">
+          <div>
+            <div class="num">Pedido #{{ seguimiento.id }}</div>
+            <div class="empresa">Estado actual: <span :class="`badge-estado badge-${seguimiento.estado_actual}`">{{ seguimiento.estado_actual.replace('_',' ') }}</span></div>
+          </div>
+        </div>
+
+        <div class="pedido-info">
+          <div class="info-item">
+            <div class="lbl">Cliente</div>
+            <div class="val">{{ seguimiento.nombre_cliente }}</div>
+          </div>
+          <div class="info-item">
+            <div class="lbl">DNI</div>
+            <div class="val">{{ seguimiento.dni }}</div>
+          </div>
+          <div class="info-item" style="grid-column: span 2">
+            <div class="lbl">Productos</div>
+            <div class="val" style="font-size:.88rem;line-height:1.7">
+              <span v-for="(item, i) in seguimiento.items" :key="i" style="display:block">
+                {{ item.nombre_producto }} <span style="color:#718096;font-weight:400">× {{ item.cantidad }}</span>
+              </span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="lbl">Agencia destino</div>
+            <div class="val">Shalom — {{ seguimiento.ciudad_agencia }}</div>
+          </div>
+          <div class="info-item">
+            <div class="lbl">Resta a pagar</div>
+            <div class="val resta">S/ {{ fmt(seguimiento.resta_pagar) }}</div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline">
+          <div class="timeline-title">Historial de estados</div>
+
+          <div
+            v-for="etapa in seguimiento.etapas"
+            :key="etapa.estado"
+            class="etapa"
+            :class="claseEtapa(etapa)"
+          >
+            <div class="etapa-icono">{{ iconoEtapa(etapa) }}</div>
+            <div class="etapa-contenido">
+              <div class="etapa-nombre">{{ labelEstado(etapa.estado) }}</div>
+              <div
+                v-if="etapa.timestamp"
+                class="etapa-fecha"
+              >{{ fmtFecha(etapa.timestamp) }}</div>
+              <div
+                v-else-if="etapa.estado === seguimiento.estado_actual"
+                class="etapa-fecha en-curso"
+              >En curso...</div>
+              <div v-else class="etapa-fecha">Pendiente</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, onMounted } = Vue
+
+const LABELS = {
+  REGISTRADO:     'Pedido Registrado',
+  EMPACADO:       'Empacado',
+  ROTULO_IMPRESO: 'Rótulo Impreso',
+  DEPOSITADO:     'Depositado en Shalom',
+  ENTREGADO:      'Entregado al Cliente',
+  CANCELADO:      'Pedido Cancelado',
+}
+const ICONOS = {
+  REGISTRADO:     '📋',
+  EMPACADO:       '📦',
+  ROTULO_IMPRESO: '🏷',
+  DEPOSITADO:     '🚚',
+  ENTREGADO:      '✅',
+  CANCELADO:      '✕',
+}
+const ORDEN = ['REGISTRADO', 'EMPACADO', 'ROTULO_IMPRESO', 'DEPOSITADO', 'ENTREGADO']
+
+createApp({
+  setup() {
+    const modo          = ref('id')
+    const query         = ref('')
+    const buscando      = ref(false)
+    const error         = ref('')
+    const seguimiento   = ref(null)
+    const resultadosDni = ref([])
+
+    async function buscar() {
+      error.value = ''
+      seguimiento.value = null
+      resultadosDni.value = []
+      if (!query.value) return
+      buscando.value = true
+
+      try {
+        if (modo.value === 'id') {
+          await cargarSeguimiento(query.value)
+        } else {
+          const res = await fetch(`${API}/pedidos/?dni=${query.value}`)
+          const data = await res.json()
+          if (!data.length) { error.value = 'No se encontraron pedidos para ese DNI'; return }
+          if (data.length === 1) { await cargarSeguimiento(data[0].id); return }
+          resultadosDni.value = data
+        }
+      } catch { error.value = 'No se pudo conectar con el servidor' }
+      finally   { buscando.value = false }
+    }
+
+    async function cargarSeguimiento(id) {
+      resultadosDni.value = []
+      buscando.value = true
+      error.value = ''
+      try {
+        const res = await fetch(`${API}/pedidos/${id}/seguimiento`)
+        if (!res.ok) { error.value = `Pedido #${id} no encontrado`; return }
+        seguimiento.value = await res.json()
+      } catch { error.value = 'Error al cargar el seguimiento' }
+      finally   { buscando.value = false }
+    }
+
+    function claseEtapa(etapa) {
+      if (!seguimiento.value) return 'pendiente'
+      if (etapa.estado === 'CANCELADO') return etapa.timestamp ? 'cancelada' : 'pendiente'
+      if (etapa.timestamp) return 'completada'
+      const idxEtapa  = ORDEN.indexOf(etapa.estado)
+      const idxActual = ORDEN.indexOf(seguimiento.value.estado_actual)
+      if (idxEtapa === idxActual) return 'en-curso'
+      return 'pendiente'
+    }
+
+    function iconoEtapa(etapa) {
+      if (etapa.estado === 'CANCELADO') return etapa.timestamp ? '✕' : '○'
+      if (etapa.timestamp) return '✓'
+      if (seguimiento.value && etapa.estado === seguimiento.value.estado_actual) return ICONOS[etapa.estado] || '🔄'
+      return '○'
+    }
+
+    function labelEstado(estado)  { return LABELS[estado]  || estado }
+
+    function limpiar() {
+      query.value = ''; error.value = ''; seguimiento.value = null; resultadosDni.value = []
+    }
+    function limpiarSeguimiento() {
+      seguimiento.value = null; error.value = ''
+    }
+
+    function fmtFecha(ts) {
+      if (!ts) return ''
+      return new Date(ts).toLocaleString('es-PE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    }
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    // Si viene ?id=X en la URL, carga directo
+    onMounted(() => {
+      const params = new URLSearchParams(window.location.search)
+      const id = params.get('id')
+      if (id) { query.value = id; cargarSeguimiento(id) }
+    })
+
+    return {
+      modo, query, buscando, error, seguimiento, resultadosDni,
+      buscar, cargarSeguimiento, limpiar, limpiarSeguimiento,
+      claseEtapa, iconoEtapa, labelEstado, fmtFecha, fmt,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

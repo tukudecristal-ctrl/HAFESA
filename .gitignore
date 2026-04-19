@@ -1,0 +1,8 @@
+backend/.env
+backend/static/imagenes/*
+!backend/static/imagenes/.gitkeep
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+*.pyo
+.DS_Store

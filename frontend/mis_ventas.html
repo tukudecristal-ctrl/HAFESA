@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Ventas</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #1a365d; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.15rem; }
+    .header-right { display: flex; align-items: center; gap: 1rem; font-size: .88rem; }
+    .user-badge { background: rgba(255,255,255,.15); padding: .3rem .75rem; border-radius: 20px; font-size: .82rem; }
+    .btn-logout { background: rgba(255,255,255,.15); border: none; color: #fff; padding: .3rem .75rem; border-radius: 20px; cursor: pointer; font-size: .82rem; }
+    .btn-logout:hover { background: rgba(255,255,255,.25); }
+
+    .container { padding: 1.5rem; max-width: 1000px; margin: 0 auto; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); padding: 1.1rem 1.3rem; }
+    .stat-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: #718096; letter-spacing: .04em; margin-bottom: .3rem; }
+    .stat-val { font-size: 1.6rem; font-weight: 800; color: #2d3748; }
+    .stat-val.green { color: #276749; }
+    .stat-val.orange { color: #c05621; }
+
+    /* Filtros */
+    .toolbar { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.2rem; }
+    .toolbar input { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; min-width: 200px; }
+    .toolbar select { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; }
+
+    /* Tabla */
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #ebf8ff; }
+    th { padding: .7rem 1rem; text-align: left; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #2c5282; white-space: nowrap; }
+    td { padding: .65rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:hover td { background: #f7fafc; }
+
+    .badge { padding: .18rem .6rem; border-radius: 20px; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+    .badge-REGISTRADO     { background: #e9d8fd; color: #44337a; }
+    .badge-EMPACADO       { background: #bee3f8; color: #2c5282; }
+    .badge-ROTULO_IMPRESO { background: #fefcbf; color: #744210; }
+    .badge-DEPOSITADO     { background: #c6f6d5; color: #22543d; }
+    .badge-ENTREGADO      { background: #9ae6b4; color: #1c4532; }
+    .badge-CANCELADO      { background: #fed7d7; color: #742a2a; }
+
+    .comision-chip { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; padding: .15rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+    .cobrada-chip  { background: #f7fafc; color: #a0aec0; border: 1px solid #e2e8f0; padding: .15rem .55rem; border-radius: 20px; font-size: .74rem; }
+
+    .items-list { font-size: .78rem; color: #4a5568; line-height: 1.6; }
+
+    .empty { text-align: center; padding: 3rem; color: #a0aec0; }
+    .spinner-wrap { text-align: center; padding: 3rem; color: #718096; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>📊 Mis Ventas</h1>
+    <div class="header-right">
+      <a href="formulario_pedido.html" style="color:#bee3f8;text-decoration:none;font-size:.88rem">+ Nuevo Pedido</a>
+      <span class="user-badge">{{ user?.nombre }}</span>
+      <button class="btn-logout" @click="logout">Salir</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total pedidos</div>
+        <div class="stat-val">{{ pedidos.length }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Entregados</div>
+        <div class="stat-val green">{{ pedidos.filter(p => p.estado === 'ENTREGADO').length }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ventas netas (entregado)</div>
+        <div class="stat-val" style="font-size:1.2rem">S/ {{ fmt(resumen.total_ventas_netas) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Comisión pendiente</div>
+        <div class="stat-val orange" style="font-size:1.2rem">S/ {{ fmt(resumen.comision_pendiente) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Comisión cobrada</div>
+        <div class="stat-val green" style="font-size:1.2rem">S/ {{ fmt(resumen.comision_cobrada) }}</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="toolbar">
+      <input v-model="busqueda" placeholder="Buscar cliente..." />
+      <select v-model="filtroEstado">
+        <option value="">Todos los estados</option>
+        <option value="REGISTRADO">📋 Registrado</option>
+        <option value="EMPACADO">📦 Empacado</option>
+        <option value="ROTULO_IMPRESO">🏷 Rótulo impreso</option>
+        <option value="DEPOSITADO">🚚 Depositado</option>
+        <option value="ENTREGADO">✅ Entregado</option>
+        <option value="CANCELADO">❌ Cancelado</option>
+      </select>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card">
+      <div class="spinner-wrap" v-if="cargando">Cargando...</div>
+      <table v-else>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Productos</th>
+            <th>Estado</th>
+            <th>Fecha estado</th>
+            <th>Total</th>
+            <th>Resta pagar</th>
+            <th>Comisión</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in pedidosFiltrados" :key="p.id">
+            <td><strong>{{ p.id }}</strong></td>
+            <td>
+              <div>{{ p.nombre_cliente }}</div>
+              <div style="font-size:.75rem;color:#718096">Reg: {{ fmtFecha(p.fecha_registro) }}</div>
+            </td>
+            <td>
+              <div class="items-list">
+                <div v-for="it in p.items" :key="it.nombre">
+                  {{ it.cantidad }}× {{ it.nombre }}
+                </div>
+              </div>
+            </td>
+            <td><span class="badge" :class="`badge-${p.estado}`">{{ p.estado.replace('_', ' ') }}</span></td>
+            <td style="font-size:.82rem;">{{ fmtFecha(p.fecha_estado) || '—' }}</td>
+            <td>S/ {{ fmt(p.precio_total) }}</td>
+            <td><strong>S/ {{ fmt(p.resta_pagar) }}</strong></td>
+            <td>
+              <span v-if="p.comision_pendiente !== null && !p.comision_pagada" class="comision-chip">
+                S/ {{ fmt(p.comision_pendiente) }}
+              </span>
+              <span v-else-if="p.comision_pagada" class="cobrada-chip">Cobrada</span>
+              <span v-else style="color:#cbd5e0">—</span>
+            </td>
+          </tr>
+          <tr v-if="!pedidosFiltrados.length">
+            <td colspan="8" class="empty">No hay pedidos que coincidan</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const user    = ref(null)
+    const pedidos = ref([])
+    const resumen = reactive({ total_ventas_netas: 0, comision_pendiente: 0, comision_cobrada: 0 })
+    const cargando = ref(true)
+    const busqueda = ref('')
+    const filtroEstado = ref('')
+
+    const pedidosFiltrados = computed(() => {
+      const q = busqueda.value.toLowerCase()
+      return pedidos.value.filter(p =>
+        (!filtroEstado.value || p.estado === filtroEstado.value) &&
+        p.nombre_cliente.toLowerCase().includes(q)
+      )
+    })
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    function fmtFecha(ts) {
+      if (!ts) return null
+      return new Date(ts).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    }
+
+    function logout() { Auth.logout() }
+
+    onMounted(async () => {
+      user.value = Auth.require(['vendedor'])
+      if (!user.value) return
+
+      const [resPedidos, resComisiones] = await Promise.all([
+        Auth.fetch(`${API}/mis-ventas/pedidos`),
+        Auth.fetch(`${API}/mis-ventas/comisiones`),
+      ])
+
+      if (resPedidos) pedidos.value = await resPedidos.json()
+      if (resComisiones) {
+        const c = await resComisiones.json()
+        Object.assign(resumen, c)
+      }
+      cargando.value = false
+    })
+
+    return { user, pedidos, pedidosFiltrados, resumen, cargando, busqueda, filtroEstado, fmt, fmtFecha, logout }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

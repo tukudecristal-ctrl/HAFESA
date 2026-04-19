@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rótulo de Envío</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+      min-height: 100vh;
+    }
+
+    .no-print {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: .75rem;
+    }
+    .btn {
+      padding: .55rem 1.2rem;
+      border: none;
+      border-radius: 7px;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-print  { background: #3182ce; color: #fff; }
+    .btn-volver { background: #e2e8f0; color: #4a5568; }
+    .btn-print:hover  { background: #2b6cb0; }
+    .btn-volver:hover { background: #cbd5e0; }
+
+    /* Rótulo */
+    .rotulo {
+      background: #fff;
+      border: 3px solid #2d3748;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 520px;
+      padding: 1.5rem;
+    }
+
+    .rotulo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #2d3748;
+      padding-bottom: .8rem;
+      margin-bottom: 1rem;
+    }
+    .rotulo-header .empresa {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #2b6cb0;
+      text-transform: uppercase;
+    }
+    .rotulo-header .pedido-num {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: #2d3748;
+    }
+
+    .rotulo-seccion {
+      margin-bottom: .9rem;
+    }
+    .rotulo-seccion .titulo {
+      font-size: .65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #718096;
+      margin-bottom: .2rem;
+    }
+    .rotulo-seccion .valor {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a202c;
+    }
+    .rotulo-seccion .sub {
+      font-size: .85rem;
+      color: #4a5568;
+      margin-top: .1rem;
+    }
+
+    .rotulo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .6rem 1.2rem;
+      margin-bottom: .9rem;
+    }
+
+    .rotulo-footer {
+      border-top: 2px dashed #2d3748;
+      padding-top: .8rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .6rem;
+    }
+    .rotulo-footer .monto-titulo {
+      font-size: .65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #718096;
+    }
+    .rotulo-footer .monto-valor {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #e53e3e;
+    }
+    .rotulo-footer .envio-valor {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .agencia-destino {
+      background: #2d3748;
+      color: #fff;
+      text-align: center;
+      padding: .6rem;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .9rem;
+    }
+
+    .error-msg {
+      background: #fff;
+      border-radius: 10px;
+      padding: 2rem;
+      text-align: center;
+      color: #e53e3e;
+      font-size: 1rem;
+    }
+
+    /* PRINT */
+    @media print {
+      body        { background: #fff; padding: 0; }
+      .no-print   { display: none !important; }
+      .rotulo     { border: 3px solid #000; box-shadow: none; max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="no-print" v-if="rotulo">
+    <button class="btn btn-print"  @click="imprimir">🖨 Imprimir</button>
+    <button class="btn btn-volver" onclick="history.back()">← Volver</button>
+  </div>
+
+  <!-- Rótulo -->
+  <div class="rotulo" v-if="rotulo">
+    <div class="rotulo-header">
+      <span class="empresa">{{ rotulo.nombre_empresa }}</span>
+      <span class="pedido-num">PEDIDO #{{ rotulo.id }}</span>
+    </div>
+
+    <div class="rotulo-seccion">
+      <div class="titulo">Cliente</div>
+      <div class="valor">{{ rotulo.nombre_cliente }}</div>
+      <div class="sub">DNI: {{ rotulo.dni }} &nbsp;|&nbsp; Tel: {{ rotulo.telefono }}</div>
+    </div>
+
+    <div class="agencia-destino">
+      📦 Shalom — {{ rotulo.ciudad_agencia }}
+    </div>
+
+    <div class="rotulo-grid">
+      <div class="rotulo-seccion">
+        <div class="titulo">Producto</div>
+        <div class="valor" style="font-size:.9rem">{{ rotulo.nombre_producto }}</div>
+      </div>
+      <div class="rotulo-seccion">
+        <div class="titulo">Cantidad</div>
+        <div class="valor" style="font-size:1.4rem">{{ rotulo.cantidad }}</div>
+      </div>
+    </div>
+
+    <div class="rotulo-footer">
+      <div>
+        <div class="monto-titulo">Costo de envío</div>
+        <div class="envio-valor">S/ {{ fmt(rotulo.costo_envio) }}</div>
+      </div>
+      <div>
+        <div class="monto-titulo">⚠ Resta a pagar</div>
+        <div class="monto-valor">S/ {{ fmt(rotulo.resta_pagar) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-msg" v-else-if="error">
+    ⚠️ {{ error }}
+  </div>
+
+  <!-- Cargando -->
+  <div v-else style="color:#718096;margin-top:2rem">Cargando rótulo...</div>
+
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, onMounted } = Vue
+
+createApp({
+  setup() {
+    const rotulo = ref(null)
+    const error  = ref('')
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const imprimir = () => window.print()
+
+    onMounted(async () => {
+      const params = new URLSearchParams(window.location.search)
+      const id = params.get('id')
+      if (!id) { error.value = 'No se especificó ID de pedido'; return }
+
+      try {
+        const res = await fetch(`${API}/pedidos/${id}/rotulo`)
+        if (!res.ok) { error.value = `Pedido #${id} no encontrado`; return }
+        rotulo.value = await res.json()
+        // Imprimir automáticamente al cargar
+        setTimeout(() => window.print(), 500)
+      } catch {
+        error.value = 'No se pudo conectar con el servidor'
+      }
+    })
+
+    return { rotulo, error, fmt, imprimir }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

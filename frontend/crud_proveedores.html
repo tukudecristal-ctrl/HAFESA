@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proveedores</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 950px; margin: 0 auto; }
+
+    .toolbar { display: flex; gap: .75rem; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .toolbar input { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; min-width: 220px; }
+    .btn { padding: .48rem 1rem; border: none; border-radius: 7px; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .btn-primary   { background: #3182ce; color: #fff; }
+    .btn-primary:hover   { background: #2b6cb0; }
+    .btn-success   { background: #38a169; color: #fff; }
+    .btn-success:hover   { background: #2f855a; }
+    .btn-warning   { background: #d69e2e; color: #fff; }
+    .btn-warning:hover   { background: #b7791f; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn-sm { padding: .28rem .65rem; font-size: .78rem; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #ebf8ff; }
+    th { padding: .7rem 1rem; text-align: left; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #2c5282; }
+    td { padding: .65rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:hover td { background: #f7fafc; }
+
+    .badge-activo   { background: #c6f6d5; color: #22543d; padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+    .badge-inactivo { background: #fed7d7; color: #742a2a; padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .modal { background: #fff; border-radius: 12px; padding: 1.8rem; width: 100%; max-width: 440px; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+    .modal h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: .9rem; }
+    .form-group label { display: block; font-size: .82rem; font-weight: 600; color: #4a5568; margin-bottom: .28rem; }
+    .form-group label .req { color: #e53e3e; }
+    .form-group input { width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .92rem; }
+    .form-group input:focus { outline: none; border-color: #4299e1; }
+    .modal-acciones { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.2rem; }
+    .msg-error { color: #e53e3e; font-size: .8rem; margin-top: .5rem; }
+
+    .empty { text-align: center; padding: 2.5rem; color: #a0aec0; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>🏭 Proveedores</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+      <a href="compras.html">Compras</a>
+      <a href="crud_productos.html">Productos</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+
+    <div class="toolbar">
+      <input v-model="busqueda" placeholder="Buscar por nombre o código..." />
+      <label style="font-size:.85rem;display:flex;align-items:center;gap:.3rem;cursor:pointer">
+        <input type="checkbox" v-model="mostrarInactivos" @change="cargar" style="width:auto" />
+        Mostrar inactivos
+      </label>
+      <button class="btn btn-success" @click="abrirNuevo" style="margin-left:auto">+ Nuevo Proveedor</button>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Contacto</th>
+            <th>Teléfono</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in proveedoresFiltrados" :key="p.id">
+            <td><code>{{ p.codigo }}</code></td>
+            <td><strong>{{ p.nombre }}</strong></td>
+            <td>{{ p.contacto || '—' }}</td>
+            <td>{{ p.telefono || '—' }}</td>
+            <td><span :class="p.activo ? 'badge-activo' : 'badge-inactivo'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
+            <td>
+              <button class="btn btn-warning btn-sm" @click="abrirEditar(p)">Editar</button>
+              <button class="btn btn-sm" :class="p.activo ? 'btn-secondary' : 'btn-success'"
+                style="margin-left:.3rem" @click="toggleActivo(p)">
+                {{ p.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!proveedoresFiltrados.length">
+            <td colspan="6" class="empty">No se encontraron proveedores</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" v-if="modal.visible" @click.self="cerrarModal">
+    <div class="modal">
+      <h2>{{ modal.editando ? 'Editar Proveedor' : 'Nuevo Proveedor' }}</h2>
+
+      <div class="form-group" v-if="!modal.editando">
+        <label>Código <span class="req">*</span></label>
+        <input v-model="modal.form.codigo" placeholder="Ej: PROV-004" />
+      </div>
+      <div class="form-group">
+        <label>Nombre <span class="req">*</span></label>
+        <input v-model="modal.form.nombre" placeholder="Razón social o nombre" />
+      </div>
+      <div class="form-group">
+        <label>Contacto</label>
+        <input v-model="modal.form.contacto" placeholder="Nombre del contacto" />
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input v-model="modal.form.telefono" placeholder="Ej: 01-4567890" />
+      </div>
+
+      <p class="msg-error" v-if="modal.error">{{ modal.error }}</p>
+
+      <div class="modal-acciones">
+        <button class="btn btn-secondary" @click="cerrarModal">Cancelar</button>
+        <button class="btn btn-primary" @click="guardar" :disabled="modal.guardando">
+          <span class="spinner" v-if="modal.guardando"></span>
+          {{ modal.guardando ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" v-if="toast">{{ toast }}</div>
+
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const proveedores      = ref([])
+    const busqueda         = ref('')
+    const mostrarInactivos = ref(false)
+    const toast            = ref('')
+
+    const modal = reactive({
+      visible: false, editando: false, id: null, error: '', guardando: false,
+      form: { codigo: '', nombre: '', contacto: '', telefono: '' },
+    })
+
+    const proveedoresFiltrados = computed(() => {
+      const q = busqueda.value.toLowerCase()
+      return proveedores.value.filter(p =>
+        p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)
+      )
+    })
+
+    async function cargar() {
+      const params = mostrarInactivos.value ? '?todos=true' : ''
+      const res = await fetch(`${API}/catalogos/proveedores${params}`)
+      proveedores.value = await res.json()
+    }
+
+    function abrirNuevo() {
+      modal.editando = false; modal.id = null; modal.error = ''
+      modal.form = { codigo: '', nombre: '', contacto: '', telefono: '' }
+      modal.visible = true
+    }
+
+    function abrirEditar(p) {
+      modal.editando = true; modal.id = p.id; modal.error = ''
+      modal.form = { nombre: p.nombre, contacto: p.contacto || '', telefono: p.telefono || '' }
+      modal.visible = true
+    }
+
+    function cerrarModal() { modal.visible = false }
+
+    async function guardar() {
+      modal.error = ''; modal.guardando = true
+      try {
+        const url    = modal.editando ? `${API}/catalogos/proveedores/${modal.id}` : `${API}/catalogos/proveedores`
+        const method = modal.editando ? 'PUT' : 'POST'
+        const body   = { ...modal.form }
+        if (!body.contacto) delete body.contacto
+        if (!body.telefono) delete body.telefono
+        const res  = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        const data = await res.json()
+        if (!res.ok) { modal.error = data.detail || 'Error al guardar'; return }
+        cerrarModal()
+        await cargar()
+        mostrarToast(modal.editando ? '✅ Proveedor actualizado' : '✅ Proveedor creado')
+      } catch { modal.error = 'Error de conexión' }
+      finally   { modal.guardando = false }
+    }
+
+    async function toggleActivo(p) {
+      const res = await fetch(`${API}/catalogos/proveedores/${p.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !p.activo }),
+      })
+      if (res.ok) { await cargar(); mostrarToast(`✅ Proveedor ${p.activo ? 'desactivado' : 'activado'}`) }
+    }
+
+    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
+
+    onMounted(() => { if (Auth.require(['administrador'])) cargar() })
+
+    return {
+      proveedores, proveedoresFiltrados, busqueda, mostrarInactivos, modal, toast,
+      cargar, abrirNuevo, abrirEditar, cerrarModal, guardar, toggleActivo,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

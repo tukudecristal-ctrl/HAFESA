@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backoffice — Pedidos</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header {
+      background: #2b6cb0;
+      color: #fff;
+      padding: .9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.2rem; }
+    header nav a {
+      color: #bee3f8;
+      text-decoration: none;
+      margin-left: 1.2rem;
+      font-size: .9rem;
+    }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+
+    /* Filtros */
+    .filtros {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      align-items: flex-end;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    }
+    .filtros label { font-size: .78rem; font-weight: 600; color: #4a5568; display: block; margin-bottom: .25rem; }
+    .filtros select, .filtros input {
+      padding: .45rem .7rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 7px;
+      font-size: .88rem;
+      color: #2d3748;
+      background: #fff;
+      min-width: 150px;
+    }
+    .filtros select:focus, .filtros input:focus { outline: none; border-color: #4299e1; }
+    .btn-filtro {
+      padding: .48rem 1rem;
+      border: none;
+      border-radius: 7px;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-buscar  { background: #3182ce; color: #fff; }
+    .btn-limpiar { background: #e2e8f0; color: #4a5568; }
+    .btn-buscar:hover  { background: #2b6cb0; }
+    .btn-limpiar:hover { background: #cbd5e0; }
+
+    /* Tabla */
+    .tabla-wrap {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #ebf8ff; }
+    th {
+      padding: .75rem 1rem;
+      text-align: left;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #2c5282;
+      white-space: nowrap;
+    }
+    td { padding: .7rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:hover td { background: #f7fafc; }
+
+    /* Badge estado */
+    .badge {
+      display: inline-block;
+      padding: .22rem .65rem;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-REGISTRADO    { background: #bee3f8; color: #2c5282; }
+    .badge-EMPACADO      { background: #fefcbf; color: #744210; }
+    .badge-ROTULO_IMPRESO{ background: #fbd38d; color: #7b341e; }
+    .badge-DEPOSITADO    { background: #e9d8fd; color: #44337a; }
+    .badge-ENTREGADO     { background: #c6f6d5; color: #22543d; }
+    .badge-CANCELADO     { background: #fed7d7; color: #742a2a; }
+
+    /* Botones acción */
+    .acciones { display: flex; gap: .4rem; flex-wrap: nowrap; }
+    .btn-accion {
+      padding: .32rem .7rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .15s;
+    }
+    .btn-accion:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-avanzar  { background: #3182ce; color: #fff; }
+    .btn-rotulo   { background: #718096; color: #fff; }
+    .btn-seguim   { background: #38a169; color: #fff; }
+    .btn-cancelar { background: #e53e3e; color: #fff; }
+    .btn-avanzar:hover:not(:disabled)  { background: #2b6cb0; }
+    .btn-rotulo:hover                  { background: #4a5568; }
+    .btn-seguim:hover                  { background: #2f855a; }
+    .btn-cancelar:hover:not(:disabled) { background: #c53030; }
+    .btn-icono { padding: .28rem .45rem; font-size: 1rem; line-height: 1; }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: .75rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: .75rem 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      flex: 1;
+      min-width: 120px;
+    }
+    .stat-card .num   { font-size: 1.6rem; font-weight: 800; color: #2b6cb0; }
+    .stat-card .lbl   { font-size: .75rem; color: #718096; margin-top: .1rem; }
+    .stat-card .icono { font-size: 1.5rem; margin-bottom: .2rem; line-height: 1; }
+
+    .empty { text-align: center; padding: 2.5rem; color: #a0aec0; font-size: .95rem; }
+
+    .loading { text-align: center; padding: 2rem; color: #718096; }
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #3182ce;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #2d3748;
+      color: #fff;
+      padding: .75rem 1.2rem;
+      border-radius: 8px;
+      font-size: .9rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      z-index: 999;
+      transition: opacity .3s;
+    }
+
+    @media (max-width: 768px) {
+      .filtros { flex-direction: column; }
+      .filtros select, .filtros input { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>📦 Gestión de Pedidos</h1>
+    <nav>
+      <a href="formulario_pedido.html">+ Nuevo Pedido</a>
+      <a href="compras.html">Compras</a>
+      <a href="comisiones.html">💰 Comisiones</a>
+      <a href="crud_proveedores.html">Proveedores</a>
+      <a href="crud_empresas.html">Empresas</a>
+      <a href="crud_usuarios.html">Usuarios</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:.75rem;font-size:.85rem">
+      <span style="color:#bee3f8">{{ currentUser?.nombre }}</span>
+      <button @click="logout" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem">Salir</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card" v-for="(count, estado) in conteoEstados" :key="estado">
+        <div class="icono">{{ iconosEstado[estado] }}</div>
+        <div class="num">{{ count }}</div>
+        <div class="lbl"><span :class="`badge badge-${estado}`">{{ estado.replace('_', ' ') }}</span></div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros">
+      <div>
+        <label>Empresa</label>
+        <select v-model="filtros.empresa_id">
+          <option value="">Todas</option>
+          <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+        </select>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select v-model="filtros.estado">
+          <option value="">Todos</option>
+          <option v-for="s in estados" :key="s" :value="s">{{ s.replace('_', ' ') }}</option>
+        </select>
+      </div>
+      <div>
+        <label>Desde</label>
+        <input type="date" v-model="filtros.fecha_desde" />
+      </div>
+      <div>
+        <label>Hasta</label>
+        <input type="date" v-model="filtros.fecha_hasta" />
+      </div>
+      <div>
+        <button class="btn-filtro btn-buscar"  @click="cargarPedidos">Buscar</button>
+        <button class="btn-filtro btn-limpiar" @click="limpiar" style="margin-left:.4rem">Limpiar</button>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="tabla-wrap">
+      <div class="loading" v-if="cargando"><span class="spinner"></span> Cargando...</div>
+
+      <table v-else-if="pedidos.length">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Vendedor</th>
+            <th>Producto</th>
+            <th>Cant.</th>
+            <th>Total</th>
+            <th>Resta</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in pedidos" :key="p.id">
+            <td><strong>#{{ p.id }}</strong></td>
+            <td>{{ fmtFecha(p.fecha_registro) }}</td>
+            <td>
+              <div>{{ p.nombre_cliente }}</div>
+              <div style="font-size:.75rem;color:#718096">{{ p.dni }}</div>
+            </td>
+            <td>{{ vendedoresMap[p.vendedor_id] || p.vendedor_id }}</td>
+            <td style="font-size:.82rem;max-width:180px">
+              <template v-if="p.detalles && p.detalles.length">
+                <div v-for="d in p.detalles" :key="d.id" style="white-space:nowrap">
+                  {{ productosMap[d.producto_id] || 'Producto' }} <span style="color:#718096">×{{ d.cantidad }}</span>
+                </div>
+              </template>
+              <template v-else>{{ productosMap[p.producto_id] || '—' }}</template>
+            </td>
+            <td>{{ p.detalles && p.detalles.length ? p.detalles.reduce((s,d)=>s+d.cantidad,0) : (p.cantidad || '—') }}</td>
+            <td>S/ {{ fmt(p.precio_total) }}</td>
+            <td><strong>S/ {{ fmt(p.resta_pagar) }}</strong></td>
+            <td><span :class="`badge badge-${p.estado}`">{{ p.estado.replace('_', ' ') }}</span></td>
+            <td>
+              <div class="acciones">
+                <button
+                  class="btn-accion btn-avanzar"
+                  :disabled="['ENTREGADO','CANCELADO'].includes(p.estado) || avanzando === p.id"
+                  @click="avanzarEstado(p)"
+                >
+                  {{ avanzando === p.id ? '...' : '▶ Avanzar' }}
+                </button>
+                <button
+                  class="btn-accion btn-cancelar btn-icono"
+                  :disabled="['DEPOSITADO','ENTREGADO','CANCELADO'].includes(p.estado) || cancelando === p.id"
+                  @click="cancelarPedido(p)"
+                  title="Cancelar pedido"
+                >
+                  {{ cancelando === p.id ? '⏳' : '✕' }}
+                </button>
+                <button class="btn-accion btn-rotulo btn-icono" @click="abrirRotulo(p.id)" title="Ver rótulo">🏷</button>
+                <button class="btn-accion btn-seguim btn-icono" @click="abrirSeguimiento(p.id)" title="Seguimiento">🔍</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="empty" v-else>No se encontraron pedidos con los filtros seleccionados.</div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" v-if="toast" @click="toast=''">{{ toast }}</div>
+
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const empresas = ref([])
+    const pedidos  = ref([])
+    const cargando  = ref(false)
+    const avanzando = ref(null)
+    const cancelando = ref(null)
+    const toast    = ref('')
+    const estados  = ['REGISTRADO', 'EMPACADO', 'ROTULO_IMPRESO', 'DEPOSITADO', 'ENTREGADO', 'CANCELADO']
+
+    const iconosEstado = {
+      REGISTRADO:     '📋',
+      EMPACADO:       '📦',
+      ROTULO_IMPRESO: '🏷️',
+      DEPOSITADO:     '🚚',
+      ENTREGADO:      '✅',
+      CANCELADO:      '❌',
+    }
+
+    function fechaHace30Dias() {
+      const d = new Date()
+      d.setDate(d.getDate() - 30)
+      return d.toISOString().slice(0, 10)
+    }
+
+    const filtros = reactive({
+      empresa_id:  '',
+      estado:      '',
+      fecha_desde: fechaHace30Dias(),
+      fecha_hasta: '',
+    })
+
+    const conteoEstados = computed(() => {
+      const c = {}
+      estados.forEach(e => c[e] = 0)
+      pedidos.value.forEach(p => { if (c[p.estado] !== undefined) c[p.estado]++ })
+      return c
+    })
+
+    const vendedoresMap = ref({})
+    const productosMap  = ref({})
+
+    async function cargarEmpresas() {
+      const res = await fetch(`${API}/catalogos/empresas`)
+      empresas.value = await res.json()
+    }
+
+    async function cargarCatalogos() {
+      const [vendRes, prodRes] = await Promise.all([
+        fetch(`${API}/catalogos/vendedores`),
+        fetch(`${API}/catalogos/productos`),
+      ])
+      const vendedores = await vendRes.json()
+      const productos  = await prodRes.json()
+      vendedores.forEach(v => vendedoresMap.value[v.id] = v.nombre_completo)
+      productos.forEach(p  => productosMap.value[p.id]  = p.nombre)
+    }
+
+    async function cargarPedidos() {
+      cargando.value = true
+      const params = new URLSearchParams()
+      if (filtros.empresa_id)  params.append('empresa_id',  filtros.empresa_id)
+      if (filtros.estado)      params.append('estado',      filtros.estado)
+      if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde)
+      if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta)
+
+      try {
+        const res = await fetch(`${API}/pedidos/?${params}`)
+        pedidos.value = await res.json()
+      } catch {
+        mostrarToast('Error al cargar pedidos')
+      } finally {
+        cargando.value = false
+      }
+    }
+
+    async function avanzarEstado(pedido) {
+      if (!confirm(`¿Avanzar pedido #${pedido.id} de "${pedido.estado}" al siguiente estado?`)) return
+      avanzando.value = pedido.id
+      try {
+        const res = await fetch(`${API}/pedidos/${pedido.id}/avanzar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: 'backoffice' }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          const idx = pedidos.value.findIndex(p => p.id === pedido.id)
+          if (idx !== -1) pedidos.value[idx] = data
+          mostrarToast(`✅ Pedido #${pedido.id} → ${data.estado}`)
+        } else {
+          mostrarToast(`⚠️ ${data.detail}`)
+        }
+      } catch {
+        mostrarToast('Error de conexión')
+      } finally {
+        avanzando.value = null
+      }
+    }
+
+    async function cancelarPedido(pedido) {
+      if (!confirm(`¿Cancelar pedido #${pedido.id}? Se liberará el stock comprometido.`)) return
+      cancelando.value = pedido.id
+      try {
+        const res = await fetch(`${API}/pedidos/${pedido.id}/cancelar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: 'backoffice' }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          const idx = pedidos.value.findIndex(p => p.id === pedido.id)
+          if (idx !== -1) pedidos.value[idx] = data
+          mostrarToast(`✅ Pedido #${pedido.id} cancelado`)
+        } else {
+          mostrarToast(`⚠️ ${data.detail}`)
+        }
+      } catch {
+        mostrarToast('Error de conexión')
+      } finally {
+        cancelando.value = null
+      }
+    }
+
+    function abrirRotulo(id)     { window.open(`rotulo.html?id=${id}`, '_blank') }
+    function abrirSeguimiento(id){ window.open(`seguimiento.html?id=${id}`, '_blank') }
+
+    function limpiar() {
+      filtros.empresa_id  = ''
+      filtros.estado      = ''
+      filtros.fecha_desde = ''
+      filtros.fecha_hasta = ''
+      cargarPedidos()
+    }
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    function fmtFecha(ts) {
+      if (!ts) return '—'
+      return new Date(ts).toLocaleString('es-PE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      })
+    }
+
+    function mostrarToast(msg) {
+      toast.value = msg
+      setTimeout(() => toast.value = '', 3000)
+    }
+
+    const currentUser = ref(null)
+    function logout() { Auth.logout() }
+
+    onMounted(() => {
+      currentUser.value = Auth.require(['administrador', 'logistica'])
+      if (!currentUser.value) return
+      cargarEmpresas()
+      cargarCatalogos()
+      cargarPedidos()
+    })
+
+    return {
+      empresas, pedidos, filtros, estados, iconosEstado, cargando, avanzando, cancelando, toast, conteoEstados,
+      vendedoresMap, productosMap, currentUser,
+      cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, fmtFecha, fmt, logout,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

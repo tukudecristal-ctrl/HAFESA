@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usuarios</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+    .btn-logout { background: rgba(255,255,255,.15); border: none; color: #fff; padding: .3rem .75rem; border-radius: 20px; cursor: pointer; font-size: .82rem; }
+    .btn-logout:hover { background: rgba(255,255,255,.25); }
+
+    .container { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+    .toolbar { display: flex; gap: .75rem; align-items: center; margin-bottom: 1.2rem; }
+    .toolbar input { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; min-width: 200px; }
+
+    .btn { padding: .48rem 1rem; border: none; border-radius: 7px; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .btn-primary   { background: #3182ce; color: #fff; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-success   { background: #38a169; color: #fff; }
+    .btn-success:hover { background: #2f855a; }
+    .btn-warning   { background: #d69e2e; color: #fff; }
+    .btn-warning:hover { background: #b7791f; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn-danger    { background: #fed7d7; color: #c53030; }
+    .btn-danger:hover { background: #feb2b2; }
+    .btn-sm { padding: .28rem .65rem; font-size: .78rem; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #ebf8ff; }
+    th { padding: .7rem 1rem; text-align: left; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #2c5282; white-space: nowrap; }
+    td { padding: .65rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:hover td { background: #f7fafc; }
+
+    .rol-badge { padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+    .rol-administrador { background: #faf089; color: #744210; }
+    .rol-vendedor      { background: #c6f6d5; color: #22543d; }
+    .rol-logistica     { background: #bee3f8; color: #2c5282; }
+    .badge-activo   { background: #c6f6d5; color: #22543d; padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+    .badge-inactivo { background: #fed7d7; color: #742a2a; padding: .18rem .55rem; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .modal { background: #fff; border-radius: 12px; padding: 1.8rem; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+    .modal h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: .9rem; }
+    .form-group label { display: block; font-size: .82rem; font-weight: 600; color: #4a5568; margin-bottom: .28rem; }
+    .form-group label .req { color: #e53e3e; }
+    .form-group input, .form-group select { width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .92rem; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #4299e1; }
+    .modal-acciones { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.2rem; }
+    .msg-error { color: #e53e3e; font-size: .8rem; margin-top: .5rem; }
+
+    .empty { text-align: center; padding: 2.5rem; color: #a0aec0; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>👤 Usuarios</h1>
+    <div class="header-right">
+      <nav>
+        <a href="backoffice.html">← Backoffice</a>
+      </nav>
+      <button class="btn-logout" @click="logout">Salir</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="toolbar">
+      <input v-model="busqueda" placeholder="Buscar por nombre o DNI..." />
+      <button class="btn btn-success" @click="abrirNuevo" style="margin-left:auto">+ Nuevo Usuario</button>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>DNI</th>
+            <th>Nombre</th>
+            <th>Rol</th>
+            <th>Vendedor vinculado</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="u in usuariosFiltrados" :key="u.id">
+            <td><code>{{ u.dni }}</code></td>
+            <td><strong>{{ u.nombre }}</strong></td>
+            <td><span class="rol-badge" :class="`rol-${u.rol}`">{{ u.rol }}</span></td>
+            <td>{{ vendedoresMap[u.vendedor_id] || '—' }}</td>
+            <td><span :class="u.activo ? 'badge-activo' : 'badge-inactivo'">{{ u.activo ? 'Activo' : 'Inactivo' }}</span></td>
+            <td>
+              <button class="btn btn-warning btn-sm" @click="abrirEditar(u)">Editar</button>
+              <button class="btn btn-danger btn-sm" style="margin-left:.3rem" @click="abrirResetPass(u)">🔑</button>
+              <button class="btn btn-sm" :class="u.activo ? 'btn-secondary' : 'btn-success'"
+                style="margin-left:.3rem" @click="toggleActivo(u)">
+                {{ u.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!usuariosFiltrados.length">
+            <td colspan="6" class="empty">No se encontraron usuarios</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Modal crear/editar -->
+  <div class="overlay" v-if="modal.visible" @click.self="cerrarModal">
+    <div class="modal">
+      <h2>{{ modal.editando ? 'Editar Usuario' : 'Nuevo Usuario' }}</h2>
+
+      <div class="form-group" v-if="!modal.editando">
+        <label>DNI <span class="req">*</span></label>
+        <input v-model="modal.form.dni" maxlength="8" inputmode="numeric" placeholder="12345678" />
+      </div>
+      <div class="form-group">
+        <label>Nombre completo <span class="req">*</span></label>
+        <input v-model="modal.form.nombre" placeholder="Nombre del usuario" />
+      </div>
+      <div class="form-group">
+        <label>Rol <span class="req">*</span></label>
+        <select v-model="modal.form.rol">
+          <option value="administrador">Administrador</option>
+          <option value="vendedor">Vendedor</option>
+          <option value="logistica">Logística</option>
+        </select>
+      </div>
+      <div class="form-group" v-if="modal.form.rol === 'vendedor'">
+        <label>Vendedor vinculado <span class="req">*</span></label>
+        <select v-model="modal.form.vendedor_id">
+          <option :value="null">— Selecciona —</option>
+          <option v-for="v in vendedores" :key="v.id" :value="v.id">{{ v.nombre_completo }}</option>
+        </select>
+      </div>
+      <div class="form-group" v-if="!modal.editando">
+        <label>Contraseña <span class="req">*</span></label>
+        <input type="password" v-model="modal.form.password" placeholder="••••••••" />
+      </div>
+
+      <p class="msg-error" v-if="modal.error">{{ modal.error }}</p>
+
+      <div class="modal-acciones">
+        <button class="btn btn-secondary" @click="cerrarModal">Cancelar</button>
+        <button class="btn btn-primary" @click="guardar" :disabled="modal.guardando">
+          <span class="spinner" v-if="modal.guardando"></span>
+          {{ modal.guardando ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal reset contraseña -->
+  <div class="overlay" v-if="resetModal.visible" @click.self="cerrarReset">
+    <div class="modal">
+      <h2>🔑 Cambiar contraseña — {{ resetModal.nombre }}</h2>
+      <div class="form-group">
+        <label>Nueva contraseña <span class="req">*</span></label>
+        <input type="password" v-model="resetModal.password" placeholder="••••••••" />
+      </div>
+      <p class="msg-error" v-if="resetModal.error">{{ resetModal.error }}</p>
+      <div class="modal-acciones">
+        <button class="btn btn-secondary" @click="cerrarReset">Cancelar</button>
+        <button class="btn btn-primary" @click="confirmarReset" :disabled="resetModal.guardando">
+          <span class="spinner" v-if="resetModal.guardando"></span>
+          {{ resetModal.guardando ? 'Guardando...' : 'Cambiar contraseña' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" v-if="toast">{{ toast }}</div>
+
+</div>
+
+<script>
+const API = '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const usuarios    = ref([])
+    const vendedores  = ref([])
+    const vendedoresMap = ref({})
+    const busqueda    = ref('')
+    const toast       = ref('')
+
+    const modal = reactive({
+      visible: false, editando: false, id: null, error: '', guardando: false,
+      form: { dni: '', nombre: '', rol: 'vendedor', vendedor_id: null, password: '' },
+    })
+
+    const resetModal = reactive({
+      visible: false, id: null, nombre: '', password: '', error: '', guardando: false,
+    })
+
+    const usuariosFiltrados = computed(() => {
+      const q = busqueda.value.toLowerCase()
+      return usuarios.value.filter(u =>
+        u.nombre.toLowerCase().includes(q) || u.dni.includes(q)
+      )
+    })
+
+    async function cargar() {
+      const res = await Auth.fetch(`${API}/auth/usuarios`)
+      if (res) usuarios.value = await res.json()
+    }
+
+    function abrirNuevo() {
+      modal.editando = false; modal.id = null; modal.error = ''
+      modal.form = { dni: '', nombre: '', rol: 'vendedor', vendedor_id: null, password: '' }
+      modal.visible = true
+    }
+
+    function abrirEditar(u) {
+      modal.editando = true; modal.id = u.id; modal.error = ''
+      modal.form = { nombre: u.nombre, rol: u.rol, vendedor_id: u.vendedor_id }
+      modal.visible = true
+    }
+
+    function cerrarModal() { modal.visible = false }
+
+    function abrirResetPass(u) {
+      resetModal.id = u.id; resetModal.nombre = u.nombre; resetModal.password = ''; resetModal.error = ''
+      resetModal.visible = true
+    }
+
+    function cerrarReset() { resetModal.visible = false }
+
+    async function guardar() {
+      if (!modal.form.nombre?.trim()) { modal.error = 'El nombre es obligatorio'; return }
+      if (!modal.editando && !modal.form.dni?.trim()) { modal.error = 'El DNI es obligatorio'; return }
+      if (!modal.editando && !/^\d{8}$/.test(modal.form.dni)) { modal.error = 'El DNI debe tener 8 dígitos'; return }
+      if (!modal.editando && !modal.form.password) { modal.error = 'La contraseña es obligatoria'; return }
+      if (modal.form.rol === 'vendedor' && !modal.form.vendedor_id) { modal.error = 'Selecciona el vendedor vinculado'; return }
+
+      modal.error = ''; modal.guardando = true
+      try {
+        const url    = modal.editando ? `${API}/auth/usuarios/${modal.id}` : `${API}/auth/usuarios`
+        const method = modal.editando ? 'PUT' : 'POST'
+        const body   = { ...modal.form }
+        if (modal.form.rol !== 'vendedor') body.vendedor_id = null
+        const res  = await Auth.fetch(url, { method, body: JSON.stringify(body) })
+        const data = await res.json()
+        if (!res.ok) { modal.error = data.detail || 'Error al guardar'; return }
+        cerrarModal(); await cargar()
+        mostrarToast(modal.editando ? '✅ Usuario actualizado' : '✅ Usuario creado')
+      } catch { modal.error = 'Error de conexión' }
+      finally  { modal.guardando = false }
+    }
+
+    async function confirmarReset() {
+      if (!resetModal.password) { resetModal.error = 'Ingresa la nueva contraseña'; return }
+      resetModal.error = ''; resetModal.guardando = true
+      try {
+        const res = await Auth.fetch(`${API}/auth/usuarios/${resetModal.id}/reset-password`, {
+          method: 'POST', body: JSON.stringify({ password: resetModal.password }),
+        })
+        const data = await res.json()
+        if (!res.ok) { resetModal.error = data.detail || 'Error'; return }
+        cerrarReset(); mostrarToast('✅ Contraseña cambiada')
+      } catch { resetModal.error = 'Error de conexión' }
+      finally  { resetModal.guardando = false }
+    }
+
+    async function toggleActivo(u) {
+      const res = await Auth.fetch(`${API}/auth/usuarios/${u.id}`, {
+        method: 'PUT', body: JSON.stringify({ activo: !u.activo }),
+      })
+      if (res?.ok) { await cargar(); mostrarToast(`✅ Usuario ${u.activo ? 'desactivado' : 'activado'}`) }
+    }
+
+    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
+    function logout() { Auth.logout() }
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador'])) return
+      const resV = await Auth.fetch(`${API}/catalogos/vendedores?todos=true`)
+      if (resV) {
+        vendedores.value = await resV.json()
+        vendedores.value.forEach(v => vendedoresMap.value[v.id] = v.nombre_completo)
+      }
+      await cargar()
+    })
+
+    return {
+      usuarios, usuariosFiltrados, vendedores, vendedoresMap, busqueda, toast,
+      modal, resetModal,
+      cargar, abrirNuevo, abrirEditar, cerrarModal, guardar,
+      abrirResetPass, cerrarReset, confirmarReset,
+      toggleActivo, mostrarToast, logout,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
