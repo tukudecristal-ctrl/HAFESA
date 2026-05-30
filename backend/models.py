@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, Boolean, Numeric, Text,
+    Column, Integer, String, Boolean, Numeric, Text, Float,
     DateTime, Date, ForeignKey, CheckConstraint, Computed
 )
 from sqlalchemy.orm import relationship
@@ -29,6 +29,58 @@ class AgenciaDestino(Base):
     ciudad = Column(String(100), nullable=False)
     direccion = Column(String(200))
     activo = Column(Boolean, default=True)
+
+
+class AgenciaShalom(Base):
+    __tablename__ = "agencias_shalom"
+
+    # Identificadores
+    id = Column(Integer, primary_key=True)
+    ter_id = Column(String(20), unique=True, nullable=False)
+
+    # Ubicación
+    lugar = Column(String(200), nullable=False)
+    lugar_over = Column(String(200))
+    direccion = Column(String(500), nullable=False)
+    provincia = Column(String(100), nullable=False)
+    departamento = Column(String(100), nullable=False)
+    zona = Column(String(50))
+    ter_zona = Column(String(100))
+
+    # Geolocalización
+    latitud = Column(Float)
+    longitud = Column(Float)
+
+    # Contacto
+    telefono = Column(String(20))
+
+    # Horarios
+    hora_atencion = Column(String(100))
+    hora_domingo = Column(String(100))
+    hora_entrega = Column(String(100))
+    hora_entrega_domingo = Column(String(100))
+
+    # Estado
+    estado_agencia = Column(String(50))
+    ter_estado_agente = Column(Integer, default=1)
+    ter_habilitado_os = Column(Integer, default=1)
+    ter_reparto_habilitado = Column(Integer, default=1)
+    ter_principal = Column(Integer, default=1)
+
+    # Servicios
+    origen = Column(Integer, default=1)
+    destino = Column(Integer, default=1)
+    ter_aereo = Column(Integer, default=0)
+    ter_internacional = Column(Integer, default=0)
+
+    # Administración
+    activo = Column(Boolean, default=True)
+    sincronizado_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+    # Relación con Pedidos
+    pedidos = relationship("Pedido", back_populates="agencia")
 
 
 class Vendedor(Base):
@@ -77,6 +129,21 @@ class Proveedor(Base):
     telefono = Column(String(20))
     activo = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class Cliente(Base):
+    __tablename__ = "clientes"
+
+    id = Column(Integer, primary_key=True)
+    dni = Column(String(8), unique=True, nullable=False)
+    nombres = Column(String(100), nullable=False)
+    apellido_paterno = Column(String(100), nullable=False)
+    apellido_materno = Column(String(100))
+    nombre_completo = Column(String(250), nullable=False)
+    fuente = Column(String(20), default="manual")  # manual | decolecta
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class Compra(Base):
@@ -138,7 +205,7 @@ class Pedido(Base):
     telefono = Column(String(9), nullable=False)
     producto_id = Column(Integer, ForeignKey("productos.id"))  # legacy
     cantidad = Column(Integer)                                  # legacy
-    agencia_id = Column(Integer, ForeignKey("agencias_destino.id"))
+    agencia_id = Column(Integer, ForeignKey("agencias_shalom.id"))
     detalle_observacion = Column(Text)
     separacion = Column(Numeric(10, 2), default=0)
     costo_envio = Column(Numeric(10, 2), default=0)
@@ -157,7 +224,7 @@ class Pedido(Base):
     empresa = relationship("Empresa")
     vendedor = relationship("Vendedor")
     producto = relationship("Producto")  # legacy
-    agencia = relationship("AgenciaDestino")
+    agencia = relationship("AgenciaShalom", back_populates="pedidos")
     logs = relationship("FlujoLog", back_populates="pedido")
     detalles = relationship("DetallePedido", back_populates="pedido", cascade="all, delete-orphan")
 

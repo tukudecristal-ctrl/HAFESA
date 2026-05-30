@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 import os
 
-from routers import catalogos, pedidos, compras, comisiones, auth, mis_ventas
+from routers import catalogos, pedidos, compras, comisiones, auth, mis_ventas, agencias, clientes
 
 load_dotenv()
 
@@ -25,6 +25,8 @@ app.add_middleware(
 app.include_router(auth.router,        prefix="/api/auth",        tags=["Auth"])
 app.include_router(mis_ventas.router,  prefix="/api/mis-ventas",  tags=["Mis Ventas"])
 app.include_router(catalogos.router,   prefix="/api/catalogos",   tags=["Catálogos"])
+app.include_router(agencias.router,    prefix="/api/agencias",    tags=["Agencias"])
+app.include_router(clientes.router,    prefix="/api/clientes",    tags=["Clientes"])
 app.include_router(pedidos.router,     prefix="/api/pedidos",     tags=["Pedidos"])
 app.include_router(compras.router,     prefix="/api/compras",     tags=["Compras"])
 app.include_router(comisiones.router,  prefix="/api/comisiones",  tags=["Comisiones"])

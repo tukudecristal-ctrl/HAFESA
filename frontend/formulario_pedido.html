@@ -257,24 +257,23 @@
       <p class="section-title">Datos del Cliente</p>
 
       <div class="form-group">
+        <label>DNI <span class="req">*</span></label>
+        <input v-model="form.dni" maxlength="8" placeholder="8 dígitos"
+          :class="{ error: errores.dni }" @blur="buscarCliente" />
+        <p class="msg-error" v-if="errores.dni">{{ errores.dni }}</p>
+      </div>
+
+      <div class="form-group">
         <label>Nombre completo <span class="req">*</span></label>
         <input v-model="form.nombre_cliente" placeholder="Nombre y apellidos" :class="{ error: errores.nombre_cliente }" />
         <p class="msg-error" v-if="errores.nombre_cliente">{{ errores.nombre_cliente }}</p>
       </div>
 
-      <div class="row2">
-        <div class="form-group">
-          <label>DNI <span class="req">*</span></label>
-          <input v-model="form.dni" maxlength="10" placeholder="8 a 10 dígitos"
-            :class="{ error: errores.dni }" @input="validarDni" />
-          <p class="msg-error" v-if="errores.dni">{{ errores.dni }}</p>
-        </div>
-        <div class="form-group">
-          <label>Teléfono <span class="req">*</span></label>
-          <input v-model="form.telefono" maxlength="9" placeholder="9XXXXXXXX"
-            :class="{ error: errores.telefono }" @input="validarTelefono" />
-          <p class="msg-error" v-if="errores.telefono">{{ errores.telefono }}</p>
-        </div>
+      <div class="form-group">
+        <label>Teléfono <span class="req">*</span></label>
+        <input v-model="form.telefono" maxlength="9" placeholder="9XXXXXXXX"
+          :class="{ error: errores.telefono }" @input="validarTelefono" />
+        <p class="msg-error" v-if="errores.telefono">{{ errores.telefono }}</p>
       </div>
 
       <!-- PRODUCTOS -->
@@ -338,12 +337,34 @@
       <p class="section-title">Destino y Pagos</p>
 
       <div class="form-group">
+        <label>Filtrar por provincia (opcional)</label>
+        <select v-model="filtro_provincia" @change="cargarAgencias">
+          <option value="">— Todas las provincias —</option>
+          <option v-for="prov in provincias" :key="prov" :value="prov">
+            {{ prov }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>Agencia Shalom destino <span class="req">*</span></label>
-        <select v-model="form.agencia_id" :class="{ error: errores.agencia_id }">
-          <option value="">— Selecciona ciudad —</option>
-          <option v-for="a in agencias" :key="a.id" :value="a.id">{{ a.ciudad }}</option>
+        <select v-model="form.agencia_id" @change="actualizarAgenciaSeleccionada" :class="{ error: errores.agencia_id }">
+          <option value="">— Selecciona agencia —</option>
+          <option v-for="a in agenciasFiltradas" :key="a.id" :value="a.id">
+            {{ a.direccion }} ({{ a.provincia }}, {{ a.departamento }})
+          </option>
         </select>
         <p class="msg-error" v-if="errores.agencia_id">{{ errores.agencia_id }}</p>
+
+        <!-- Mostrar detalles de agencia seleccionada -->
+        <div v-if="agenciaSeleccionada" style="margin-top: 0.8rem; padding: 0.8rem; background: #f7fafc; border-radius: 6px; font-size: 0.85rem; border-left: 4px solid #3182ce;">
+          <div><strong>Lugar:</strong> {{ agenciaSeleccionada.lugar }}</div>
+          <div><strong>Dirección:</strong> {{ agenciaSeleccionada.direccion }}</div>
+          <div><strong>Provincia:</strong> {{ agenciaSeleccionada.provincia }}</div>
+          <div><strong>Departamento:</strong> {{ agenciaSeleccionada.departamento }}</div>
+          <div v-if="agenciaSeleccionada.telefono"><strong>Teléfono:</strong> {{ agenciaSeleccionada.telefono }}</div>
+          <div v-if="agenciaSeleccionada.hora_atencion"><strong>Horario:</strong> {{ agenciaSeleccionada.hora_atencion }}</div>
+        </div>
       </div>
 
       <div class="row3">
@@ -413,7 +434,7 @@
 </div>
 
 <script>
-const API = '/api'
+const API = 'http://localhost:8000/api'
 const { createApp, ref, reactive, computed } = Vue
 
 function seleccionarPrecio(producto, cantidad) {
@@ -432,6 +453,9 @@ createApp({
     const empresas          = ref([])
     const productos         = ref([])
     const agencias          = ref([])
+    const provincias        = ref([])
+    const filtro_provincia  = ref('')
+    const agenciaSeleccionada = ref(null)
     const vendedoresEmpresa = ref([])
     const enviando          = ref(false)
     const exito             = ref(false)
@@ -458,18 +482,57 @@ createApp({
       dni: '', telefono: '', agencia_id: '',
     })
 
+    // ── Cargar agencias con filtro opcional ────────────────────
+    async function cargarAgencias() {
+      try {
+        let url = `${API}/agencias/list`
+        if (filtro_provincia.value) {
+          url += `?provincia=${encodeURIComponent(filtro_provincia.value)}`
+        }
+        const res = await fetch(url)
+        agencias.value = await res.json()
+        agenciaSeleccionada.value = null
+      } catch (e) {
+        console.error('Error cargando agencias:', e)
+        agencias.value = []
+      }
+    }
+
+    // ── Cargar provincias disponibles ───────────────────────────
+    async function cargarProvincias() {
+      try {
+        const res = await fetch(`${API}/agencias/meta/provincias`)
+        provincias.value = await res.json()
+      } catch (e) {
+        console.error('Error cargando provincias:', e)
+        provincias.value = []
+      }
+    }
+
+    // ── Actualizar agencia seleccionada ────────────────────────
+    function actualizarAgenciaSeleccionada() {
+      if (!form.agencia_id) {
+        agenciaSeleccionada.value = null
+        return
+      }
+      const agencia = agencias.value.find(a => a.id === parseInt(form.agencia_id))
+      agenciaSeleccionada.value = agencia || null
+    }
+
     // ── Catálogos iniciales ────────────────────────────────────
     async function cargarEmpresasYAgencias() {
       const user = Auth.require()
       if (!user) return
       currentUser.value = user
 
-      const [empRes, agRes] = await Promise.all([
+      const [empRes] = await Promise.all([
         Auth.fetch(`${API}/catalogos/empresas`),
-        Auth.fetch(`${API}/catalogos/agencias`),
       ])
       empresas.value = await empRes.json()
-      agencias.value = await agRes.json()
+
+      // Cargar agencias y provincias
+      await cargarAgencias()
+      await cargarProvincias()
 
       // Si el usuario es vendedor: preseleccionar empresa y vendedor
       if (user.rol === 'vendedor' && user.vendedor_id) {
@@ -547,13 +610,41 @@ createApp({
 
     // ── Validaciones ───────────────────────────────────────────
     function validarDni() {
-      errores.dni = /^\d{8,10}$/.test(form.dni) ? '' : 'Debe tener entre 8 y 10 dígitos'
+      errores.dni = /^\d{8}$/.test(form.dni) ? '' : 'DNI debe tener exactamente 8 dígitos'
     }
     function validarTelefono() {
       errores.telefono = /^9\d{8}$/.test(form.telefono) ? '' : 'Debe tener 9 dígitos y empezar con 9'
     }
 
+    // ── Buscar cliente por DNI ──────────────────────────────────
+    async function buscarCliente() {
+      errores.dni = ''
+      errores.nombre_cliente = ''
+      if (!form.dni.trim()) return
+
+      validarDni()
+      if (errores.dni) return
+
+      try {
+        const res = await Auth.fetch(`${API}/clientes/buscar/${form.dni}`)
+        if (!res.ok) {
+          const err = await res.json()
+          errores.dni = err.detail || 'No se encontró el DNI'
+          return
+        }
+        const cliente = await res.json()
+        form.nombre_cliente = cliente.nombre_completo
+      } catch (e) {
+        errores.dni = 'Error al buscar cliente: ' + (e.message || 'intenta de nuevo')
+      }
+    }
+
     // ── Computed ───────────────────────────────────────────────
+    const agenciasFiltradas = computed(() => {
+      if (!filtro_provincia.value) return agencias.value
+      return agencias.value.filter(a => a.provincia === filtro_provincia.value)
+    })
+
     const itemsValidos = computed(() =>
       items.value.filter(i => i.producto_id && i.cantidad > 0 && !i.error)
     )
@@ -649,13 +740,15 @@ createApp({
     cargarEmpresasYAgencias()
 
     return {
-      empresas, productos, agencias, vendedoresEmpresa,
+      empresas, productos, agencias, provincias, filtro_provincia, agenciaSeleccionada, vendedoresEmpresa,
+      agenciasFiltradas,
       form, errores, items,
       subtotalItems, itemsValidos, restaPagar, formularioValido,
       enviando, exito, pedidoCreado, errorApi, currentUser,
       onEmpresaChange, onProductoChange, onCantidadChange,
+      cargarAgencias, actualizarAgenciaSeleccionada,
       agregarItem, eliminarItem,
-      validarDni, validarTelefono,
+      validarDni, validarTelefono, buscarCliente,
       enviar, fmt, logout,
     }
   }

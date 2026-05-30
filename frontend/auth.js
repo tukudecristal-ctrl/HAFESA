@@ -1,6 +1,7 @@
 // auth.js — Hafesa · guard de autenticación compartido
 const AUTH_TOKEN_KEY = 'hafesa_token'
 const AUTH_USER_KEY  = 'hafesa_user'
+const API_BASE_URL = 'http://localhost:8000'
 
 const Auth = {
   getToken() { return localStorage.getItem(AUTH_TOKEN_KEY) },
@@ -49,7 +50,9 @@ const Auth = {
     if (!(options.body instanceof FormData)) {
       headers['Content-Type'] = headers['Content-Type'] || 'application/json'
     }
-    const res = await fetch(url, { ...options, headers })
+    // Resolver URL relativa a URL absoluta del backend
+    const fullUrl = url.startsWith('/api/') ? API_BASE_URL + url : url
+    const res = await fetch(fullUrl, { ...options, headers })
     if (res.status === 401) { this.logout(); return null }
     return res
   },

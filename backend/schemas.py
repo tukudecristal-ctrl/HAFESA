@@ -424,3 +424,64 @@ class CompraOut(BaseModel):
     detalles: list[DetalleCompraOut]
 
     model_config = {"from_attributes": True}
+
+
+# ── Agencias Shalom ───────────────────────────────────────────
+class AgenciaShalomLista(BaseModel):
+    id: int
+    ter_id: str
+    lugar: str
+    lugar_over: Optional[str] = None
+    direccion: str
+    provincia: str
+    departamento: str
+    telefono: Optional[str] = None
+    hora_atencion: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    activo: bool
+
+    model_config = {"from_attributes": True}
+
+
+class AgenciaShalomDetalle(AgenciaShalomLista):
+    zona: Optional[str] = None
+    ter_zona: Optional[str] = None
+    hora_domingo: Optional[str] = None
+    hora_entrega: Optional[str] = None
+    hora_entrega_domingo: Optional[str] = None
+    estadoAgencia: Optional[str] = None
+    ter_estado_agente: int = 1
+    ter_habilitado_OS: int = 1
+    ter_reparto_habilitado: int = 1
+    ter_principal: int = 1
+    origen: int = 1
+    destino: int = 1
+    ter_aereo: int = 0
+    ter_internacional: int = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    sincronizado_at: Optional[datetime] = None
+
+
+# ── Cliente ───────────────────────────────────────────────────
+class ClienteOut(BaseModel):
+    id: int
+    dni: str
+    nombres: str
+    apellido_paterno: str
+    apellido_materno: Optional[str]
+    nombre_completo: str
+    fuente: str
+    activo: bool
+    created_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}
+
+
+class ClienteLookup(BaseModel):
+    dni: str
+    nombres: str
+    apellido_paterno: str
+    apellido_materno: Optional[str]
+    nombre_completo: str
