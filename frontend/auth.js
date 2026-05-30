@@ -1,7 +1,8 @@
 // auth.js — Hafesa · guard de autenticación compartido
 const AUTH_TOKEN_KEY = 'hafesa_token'
 const AUTH_USER_KEY  = 'hafesa_user'
-const API_BASE_URL = 'http://localhost:8000'
+// En local (puerto 3000) el backend está en 8000. En producción nginx hace el proxy.
+const API_BASE_URL = (location.port === '3000') ? 'http://localhost:8000' : ''
 
 const Auth = {
   getToken() { return localStorage.getItem(AUTH_TOKEN_KEY) },

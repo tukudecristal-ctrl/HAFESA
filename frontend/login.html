@@ -201,7 +201,8 @@ createApp({
 
       cargando.value = true
       try {
-        const res = await fetch('http://localhost:8000/api/auth/login', {
+        const BASE = (location.port === '3000') ? 'http://localhost:8000' : ''
+        const res = await fetch(`${BASE}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dni: dni.value, password: password.value }),
