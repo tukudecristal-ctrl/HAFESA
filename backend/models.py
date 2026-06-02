@@ -205,7 +205,7 @@ class Pedido(Base):
     telefono = Column(String(9), nullable=False)
     producto_id = Column(Integer, ForeignKey("productos.id"))  # legacy
     cantidad = Column(Integer)                                  # legacy
-    agencia_id = Column(Integer, ForeignKey("agencias_shalom.id"))
+    agencia_id = Column(Integer, ForeignKey("agencias_shalom.id"), nullable=True)
     detalle_observacion = Column(Text)
     separacion = Column(Numeric(10, 2), default=0)
     costo_envio = Column(Numeric(10, 2), default=0)

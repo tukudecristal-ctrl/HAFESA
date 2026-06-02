@@ -48,6 +48,12 @@ def listar_pedidos(
 # ── Crear pedido ───────────────────────────────────────────────
 @router.post("/", response_model=schemas.PedidoOut, status_code=201)
 def crear_pedido(data: schemas.PedidoCreate, db: Session = Depends(get_db)):
+    # Validar consistencia de tipo_destino
+    if data.tipo_destino == 'shalom' and not data.agencia_id:
+        raise HTTPException(status_code=400, detail="agencia_id requerido cuando tipo_destino='shalom'")
+    if data.tipo_destino == 'otro' and not data.direccion_otra_agencia:
+        raise HTTPException(status_code=400, detail="direccion_otra_agencia requerido cuando tipo_destino='otro'")
+
     # Validar productos y calcular precios
     detalles_preparados = []
     for item in data.detalles:
@@ -244,7 +250,7 @@ def obtener_rotulo(pedido_id: int, db: Session = Depends(get_db)):
         dni=pedido.dni,
         telefono=pedido.telefono,
         items=items,
-        ciudad_agencia=pedido.agencia.ciudad,
+        ciudad_agencia=pedido.agencia.ciudad if pedido.agencia else "No especificada",
         costo_envio=pedido.costo_envio,
         descuento=pedido.descuento or Decimal("0.00"),
         resta_pagar=pedido.resta_pagar,
@@ -293,7 +299,7 @@ def obtener_seguimiento(pedido_id: int, db: Session = Depends(get_db)):
         nombre_cliente=pedido.nombre_cliente,
         dni=pedido.dni,
         items=items,
-        ciudad_agencia=pedido.agencia.ciudad,
+        ciudad_agencia=pedido.agencia.ciudad if pedido.agencia else "No especificada",
         resta_pagar=pedido.resta_pagar,
         estado_actual=pedido.estado,
         etapas=etapas,
