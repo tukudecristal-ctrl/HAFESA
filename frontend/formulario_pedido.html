@@ -339,13 +339,13 @@
       <!-- Tipo de Destino: Shalom vs Otro -->
       <div class="form-group">
         <label>Tipo de Destino <span class="req">*</span></label>
-        <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
-          <label style="display: flex; align-items: center; font-weight: 500; cursor: pointer;">
-            <input type="radio" v-model="tipoDestino" value="shalom" style="margin-right: 0.5rem;" @change="limpiarDestinoOtro" />
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 0.5rem;">
+          <label style="display: flex; align-items: center; font-weight: 500; cursor: pointer; white-space: nowrap;">
+            <input type="radio" v-model="tipoDestino" value="shalom" style="margin-right: 0.5rem; flex-shrink: 0;" @change="limpiarDestinoOtro" />
             Shalom
           </label>
-          <label style="display: flex; align-items: center; font-weight: 500; cursor: pointer;">
-            <input type="radio" v-model="tipoDestino" value="otro" style="margin-right: 0.5rem;" />
+          <label style="display: flex; align-items: center; font-weight: 500; cursor: pointer; white-space: nowrap;">
+            <input type="radio" v-model="tipoDestino" value="otro" style="margin-right: 0.5rem; flex-shrink: 0;" />
             Otro
           </label>
         </div>
@@ -361,6 +361,16 @@
               {{ dept }}
             </option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label>Buscar Agencia (por lugar o dirección)</label>
+          <input
+            v-model="busquedaAgencia"
+            type="text"
+            placeholder="Ej: Chacha, Lima, Av. Principal..."
+            style="margin-bottom: 0.8rem;"
+          />
         </div>
 
         <div class="form-group">
@@ -482,6 +492,7 @@ createApp({
     const agencias          = ref([])
     const departamentos     = ref([])
     const filtro_departamento = ref('')
+    const busquedaAgencia   = ref('')
     const agenciaSeleccionada = ref(null)
     const tipoDestino       = ref('shalom')
     const direccionOtraAgencia = ref('')
@@ -674,14 +685,31 @@ createApp({
     function limpiarDestinoOtro() {
       form.direccionOtraAgencia = ''
       form.agencia_id = ''
+      busquedaAgencia.value = ''
       agenciaSeleccionada.value = null
       errores.direccionOtraAgencia = ''
     }
 
     // ── Computed ───────────────────────────────────────────────
     const agenciasFiltradas = computed(() => {
-      if (!filtro_departamento.value) return agencias.value
-      return agencias.value.filter(a => a.departamento === filtro_departamento.value)
+      let result = agencias.value
+
+      // Filtrar por departamento si está seleccionado
+      if (filtro_departamento.value) {
+        result = result.filter(a => a.departamento === filtro_departamento.value)
+      }
+
+      // Filtrar por búsqueda de texto (subcadena case-insensitive)
+      if (busquedaAgencia.value.trim()) {
+        const search = busquedaAgencia.value.toLowerCase()
+        result = result.filter(a =>
+          a.lugar.toLowerCase().includes(search) ||
+          a.direccion.toLowerCase().includes(search) ||
+          a.departamento.toLowerCase().includes(search)
+        )
+      }
+
+      return result
     })
 
     const itemsValidos = computed(() =>
@@ -791,7 +819,7 @@ createApp({
     cargarEmpresasYAgencias()
 
     return {
-      empresas, productos, agencias, departamentos, filtro_departamento, agenciaSeleccionada, vendedoresEmpresa,
+      empresas, productos, agencias, departamentos, filtro_departamento, busquedaAgencia, agenciaSeleccionada, vendedoresEmpresa,
       agenciasFiltradas, tipoDestino, direccionOtraAgencia,
       form, errores, items,
       subtotalItems, itemsValidos, restaPagar, formularioValido,
