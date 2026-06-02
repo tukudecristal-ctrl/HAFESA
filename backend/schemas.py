@@ -222,7 +222,9 @@ class PedidoCreate(BaseModel):
     dni: str
     telefono: str
     detalles: list[DetallePedidoCreate]
-    agencia_id: int
+    agencia_id: Optional[int] = None
+    tipo_destino: str = 'shalom'
+    direccion_otra_agencia: Optional[str] = None
     detalle_observacion: Optional[str] = None
     separacion: Decimal = Decimal("0.00")
     costo_envio: Decimal = Decimal("0.00")
@@ -271,7 +273,9 @@ class PedidoOut(BaseModel):
     telefono: str
     producto_id: Optional[int]      # legacy
     cantidad: Optional[int]         # legacy
-    agencia_id: int
+    agencia_id: Optional[int]
+    tipo_destino: str = 'shalom'
+    direccion_otra_agencia: Optional[str]
     detalle_observacion: Optional[str]
     separacion: Decimal
     costo_envio: Decimal

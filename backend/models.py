@@ -220,6 +220,8 @@ class Pedido(Base):
     fecha_entrega = Column(DateTime)
     fecha_cancelado = Column(DateTime)
     fecha_pago_comision = Column(DateTime)
+    tipo_destino = Column(String(20), default='shalom')
+    direccion_otra_agencia = Column(String(500), nullable=True)
 
     empresa = relationship("Empresa")
     vendedor = relationship("Vendedor")
