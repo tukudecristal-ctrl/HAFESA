@@ -229,13 +229,12 @@ createApp({
       if (!id) { error.value = 'No se especificó ID de pedido'; return }
 
       try {
-        const res = await Auth.fetch(`${API}/pedidos/${id}/rotulo`)
-        if (!res.ok) { error.value = `Pedido #${id} no encontrado`; return }
+        const res = await fetch(`${API}/pedidos/${id}/rotulo`)
+        if (!res.ok) { error.value = `Pedido #${id} no encontrado (status ${res.status})`; return }
         rotulo.value = await res.json()
-        // Imprimir automáticamente al cargar
         setTimeout(() => window.print(), 500)
-      } catch {
-        error.value = 'No se pudo conectar con el servidor'
+      } catch(e) {
+        error.value = 'Error: ' + e.message
       }
     })
 

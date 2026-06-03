@@ -397,7 +397,7 @@ createApp({
         if (modo.value === 'id') {
           await cargarSeguimiento(query.value)
         } else {
-          const res = await Auth.fetch(`${API}/pedidos/?dni=${query.value}`)
+          const res = await fetch(`${API}/pedidos/?dni=${query.value}`)
           const data = await res.json()
           if (!data.length) { error.value = 'No se encontraron pedidos para ese DNI'; return }
           if (data.length === 1) { await cargarSeguimiento(data[0].id); return }
@@ -412,10 +412,10 @@ createApp({
       buscando.value = true
       error.value = ''
       try {
-        const res = await Auth.fetch(`${API}/pedidos/${id}/seguimiento`)
-        if (!res.ok) { error.value = `Pedido #${id} no encontrado`; return }
+        const res = await fetch(`${API}/pedidos/${id}/seguimiento`)
+        if (!res.ok) { error.value = `Pedido #${id} no encontrado (status ${res.status})`; return }
         seguimiento.value = await res.json()
-      } catch { error.value = 'Error al cargar el seguimiento' }
+      } catch(e) { error.value = 'Error: ' + e.message }
       finally   { buscando.value = false }
     }
 
