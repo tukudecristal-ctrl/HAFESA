@@ -29,7 +29,11 @@ def listar_pedidos(
     dni: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.Pedido).options(joinedload(models.Pedido.detalles))
+    q = db.query(models.Pedido).options(
+        joinedload(models.Pedido.detalles).joinedload(models.DetallePedido.producto),
+        joinedload(models.Pedido.empresa),
+        joinedload(models.Pedido.agencia),
+    )
     if empresa_id:
         q = q.filter(models.Pedido.empresa_id == empresa_id)
     if vendedor_id:
