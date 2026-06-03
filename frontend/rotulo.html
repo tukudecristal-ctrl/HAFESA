@@ -226,7 +226,7 @@ createApp({
       if (!id) { error.value = 'No se especificó ID de pedido'; return }
 
       try {
-        const res = await fetch(`${API}/pedidos/${id}/rotulo`)
+        const res = await Auth.fetch(`${API}/pedidos/${id}/rotulo`)
         if (!res.ok) { error.value = `Pedido #${id} no encontrado`; return }
         rotulo.value = await res.json()
         // Imprimir automáticamente al cargar

@@ -363,7 +363,7 @@ createApp({
     const productosMap  = ref({})
 
     async function cargarEmpresas() {
-      const res = await fetch(`${API}/catalogos/empresas`)
+      const res = await Auth.fetch(`${API}/catalogos/empresas`)
       empresas.value = await res.json()
     }
 
@@ -387,7 +387,7 @@ createApp({
       if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta)
 
       try {
-        const res = await fetch(`${API}/pedidos/?${params}`)
+        const res = await Auth.fetch(`${API}/pedidos/?${params}`)
         pedidos.value = await res.json()
       } catch {
         mostrarToast('Error al cargar pedidos')
@@ -400,7 +400,7 @@ createApp({
       if (!confirm(`¿Avanzar pedido #${pedido.id} de "${pedido.estado}" al siguiente estado?`)) return
       avanzando.value = pedido.id
       try {
-        const res = await fetch(`${API}/pedidos/${pedido.id}/avanzar`, {
+        const res = await Auth.fetch(`${API}/pedidos/${pedido.id}/avanzar`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: 'backoffice' }),
@@ -424,7 +424,7 @@ createApp({
       if (!confirm(`¿Cancelar pedido #${pedido.id}? Se liberará el stock comprometido.`)) return
       cancelando.value = pedido.id
       try {
-        const res = await fetch(`${API}/pedidos/${pedido.id}/cancelar`, {
+        const res = await Auth.fetch(`${API}/pedidos/${pedido.id}/cancelar`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: 'backoffice' }),
