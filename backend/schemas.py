@@ -318,6 +318,9 @@ class PedidoRotuloOut(BaseModel):
     telefono: str
     items: list[ItemPedidoOut]
     ciudad_agencia: str
+    direccion_agencia: Optional[str] = None
+    tipo_destino: str = 'shalom'
+    direccion_otra_agencia: Optional[str] = None
     costo_envio: Decimal
     descuento: Decimal
     resta_pagar: Decimal

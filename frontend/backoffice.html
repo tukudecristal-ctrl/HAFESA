@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Backoffice — Pedidos</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
   <script src="auth.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -238,6 +239,7 @@
       <div>
         <button class="btn-filtro btn-buscar"  @click="cargarPedidos">Buscar</button>
         <button class="btn-filtro btn-limpiar" @click="limpiar" style="margin-left:.4rem">Limpiar</button>
+        <button class="btn-filtro" style="background: #48bb78; color: #fff; margin-left:.4rem" @click="exportarRotulosExcel">📊 Rotulo +</button>
       </div>
     </div>
 
@@ -455,6 +457,45 @@ createApp({
       cargarPedidos()
     }
 
+    function exportarRotulosExcel() {
+      if (!pedidos.value.length) {
+        mostrarToast('⚠️ No hay pedidos para exportar')
+        return
+      }
+
+      const datos = pedidos.value.map(p => ({
+        'ID': p.id,
+        'Cliente': p.nombre_cliente,
+        'DNI': p.dni,
+        'Agencia': p.agencia?.lugar || 'No especificada',
+        'Dirección': p.agencia?.direccion || p.direccion_otra_agencia || '—',
+        'Productos': p.detalles.length > 1 ? 'Varios' : (p.detalles[0]?.producto?.nombre || '—'),
+        'Cantidad': p.detalles.reduce((sum, d) => sum + d.cantidad, 0),
+        'Empresa': p.empresa?.nombre || '—',
+        'Costo Envío': fmt(p.costo_envio),
+        'Resta a Pagar': fmt(p.resta_pagar)
+      }))
+
+      const ws = XLSX.utils.json_to_sheet(datos)
+      ws['!cols'] = [
+        { wch: 8 },   // ID
+        { wch: 20 },  // Cliente
+        { wch: 12 },  // DNI
+        { wch: 20 },  // Agencia
+        { wch: 30 },  // Dirección
+        { wch: 25 },  // Productos
+        { wch: 10 },  // Cantidad
+        { wch: 20 },  // Empresa
+        { wch: 14 },  // Costo Envío
+        { wch: 14 }   // Resta a Pagar
+      ]
+
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Rótulos')
+      XLSX.writeFile(wb, `Rotulos_${new Date().toISOString().split('T')[0]}.xlsx`)
+      mostrarToast('✅ Excel exportado exitosamente')
+    }
+
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
     function fmtFecha(ts) {
@@ -484,7 +525,7 @@ createApp({
     return {
       empresas, pedidos, filtros, estados, iconosEstado, cargando, avanzando, cancelando, toast, conteoEstados,
       vendedoresMap, productosMap, currentUser,
-      cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, fmtFecha, fmt, logout,
+      cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, exportarRotulosExcel, fmtFecha, fmt, logout,
     }
   }
 }).mount('#app')
