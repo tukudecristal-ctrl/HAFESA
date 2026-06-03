@@ -211,6 +211,7 @@ class DetallePedidoOut(BaseModel):
     cantidad: int
     precio_unitario: Decimal
     subtotal: Optional[Decimal]
+    nombre_producto: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -291,6 +292,10 @@ class PedidoOut(BaseModel):
     fecha_cancelado: Optional[datetime]
     fecha_pago_comision: Optional[datetime]
     detalles: list[DetallePedidoOut] = []
+    # Campos relacionales (populados por el endpoint)
+    nombre_empresa: Optional[str] = None
+    ciudad_agencia: Optional[str] = None
+    direccion_agencia: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

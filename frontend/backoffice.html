@@ -466,18 +466,27 @@ createApp({
       }
 
       try {
-      const datos = pedidos.value.map(p => ({
-        'ID': p.id,
-        'Cliente': p.nombre_cliente,
-        'DNI': p.dni,
-        'Agencia': p.agencia?.lugar || 'No especificada',
-        'Dirección': p.agencia?.direccion || p.direccion_otra_agencia || '—',
-        'Productos': p.detalles.length > 1 ? 'Varios' : (p.detalles[0]?.producto?.nombre || '—'),
-        'Cantidad': p.detalles.reduce((sum, d) => sum + d.cantidad, 0),
-        'Empresa': p.empresa?.nombre || '—',
-        'Costo Envío': fmt(p.costo_envio),
-        'Resta a Pagar': fmt(p.resta_pagar)
-      }))
+      const datos = pedidos.value.map(p => {
+        const totalCantidad = p.detalles.reduce((s, d) => s + d.cantidad, 0)
+        const nombreProducto = p.detalles.length > 1
+          ? 'Varios'
+          : (p.detalles[0]?.nombre_producto || '—')
+        const direccion = p.tipo_destino === 'otro'
+          ? (p.direccion_otra_agencia || '—')
+          : (p.direccion_agencia || '—')
+        return {
+          'ID':           p.id,
+          'Cliente':      p.nombre_cliente,
+          'DNI':          p.dni,
+          'Agencia':      p.ciudad_agencia || 'No especificada',
+          'Dirección':    direccion,
+          'Productos':    nombreProducto,
+          'Cantidad':     totalCantidad,
+          'Empresa':      p.nombre_empresa || '—',
+          'Costo Envío':  fmt(p.costo_envio),
+          'Resta Pagar':  fmt(p.resta_pagar),
+        }
+      })
 
       const ws = XLSX.utils.json_to_sheet(datos)
       ws['!cols'] = [

@@ -46,7 +46,21 @@ def listar_pedidos(
         q = q.filter(models.Pedido.fecha_registro <= datetime.combine(fecha_hasta, datetime.max.time()))
     if dni:
         q = q.filter(models.Pedido.dni == dni)
-    return q.order_by(models.Pedido.fecha_registro.desc()).all()
+
+    pedidos = q.order_by(models.Pedido.fecha_registro.desc()).all()
+
+    # Popular campos relacionales en cada pedido y detalle
+    result = []
+    for p in pedidos:
+        out = schemas.PedidoOut.model_validate(p)
+        out.nombre_empresa   = p.empresa.nombre if p.empresa else None
+        out.ciudad_agencia   = p.agencia.lugar  if p.agencia else None
+        out.direccion_agencia = p.agencia.direccion if p.agencia else None
+        for i, d in enumerate(out.detalles):
+            if i < len(p.detalles) and p.detalles[i].producto:
+                out.detalles[i].nombre_producto = p.detalles[i].producto.nombre
+        result.append(out)
+    return result
 
 
 # ── Crear pedido ───────────────────────────────────────────────
