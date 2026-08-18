@@ -120,6 +120,23 @@ def reset_password(
     return usuario
 
 
+# ── Cambio de clave (cualquier usuario autenticado) ────────────
+@router.post("/cambiar-clave")
+def cambiar_clave(
+    data: schemas.CambiarClaveInput,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    usuario = db.query(models.Usuario).filter(models.Usuario.id == current_user["usuario_id"]).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if not _verify(data.clave_actual, usuario.password_hash):
+        raise HTTPException(status_code=400, detail="La clave actual es incorrecta")
+    usuario.password_hash = _hash(data.nueva_clave)
+    db.commit()
+    return {"ok": True}
+
+
 # ── Setup inicial (solo si no hay usuarios) ────────────────────
 @router.post("/setup", response_model=schemas.UsuarioOut, status_code=201)
 def setup_inicial(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):

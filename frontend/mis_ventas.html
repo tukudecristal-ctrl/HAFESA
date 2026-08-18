@@ -161,6 +161,7 @@
     <h1>📊 Mis Ventas</h1>
     <div class="header-right">
       <a href="formulario_pedido.html" style="color:#bee3f8;text-decoration:none;font-size:.88rem">+ Nuevo Pedido</a>
+      <a href="cambiar_clave.html"    style="color:#bee3f8;text-decoration:none;font-size:.88rem">🔑 Clave</a>
       <span class="user-badge">{{ user?.nombre }}</span>
       <button class="btn-logout" @click="logout">Salir</button>
     </div>
@@ -175,20 +176,12 @@
         <div class="stat-val">{{ pedidos.length }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Entregados</div>
-        <div class="stat-val green">{{ pedidos.filter(p => p.estado === 'ENTREGADO').length }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Ventas netas (entregado)</div>
-        <div class="stat-val" style="font-size:1.2rem">S/ {{ fmt(resumen.total_ventas_netas) }}</div>
+        <div class="stat-label">Entregados pendientes</div>
+        <div class="stat-val green">{{ pedidos.filter(p => p.estado === 'ENTREGADO' && p.comision_pendiente !== null && !p.comision_pagada).length }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Comisión pendiente</div>
         <div class="stat-val orange" style="font-size:1.2rem">S/ {{ fmt(resumen.comision_pendiente) }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Comisión cobrada</div>
-        <div class="stat-val green" style="font-size:1.2rem">S/ {{ fmt(resumen.comision_cobrada) }}</div>
       </div>
     </div>
 

@@ -342,10 +342,11 @@
     <nav :class="{ 'nav-open': navOpen }">
       <a href="formulario_pedido.html" @click="navOpen = false">+ Nuevo Pedido</a>
       <a href="compras.html"           @click="navOpen = false">Compras</a>
-      <a href="comisiones.html"        @click="navOpen = false">💰 Comisiones</a>
-      <a href="crud_proveedores.html"  @click="navOpen = false">Proveedores</a>
-      <a href="crud_empresas.html"     @click="navOpen = false">Empresas</a>
-      <a href="crud_usuarios.html"     @click="navOpen = false">Usuarios</a>
+      <a v-if="currentUser?.rol === 'administrador'" href="comisiones.html"       @click="navOpen = false">💰 Comisiones</a>
+      <a v-if="currentUser?.rol === 'administrador'" href="crud_proveedores.html" @click="navOpen = false">Proveedores</a>
+      <a v-if="currentUser?.rol === 'administrador'" href="crud_empresas.html"    @click="navOpen = false">Empresas</a>
+      <a v-if="currentUser?.rol === 'administrador'" href="crud_usuarios.html"    @click="navOpen = false">Usuarios</a>
+      <a href="cambiar_clave.html"       @click="navOpen = false">🔑 Cambiar clave</a>
       <a href="#" class="nav-salir-mobile" @click.prevent="logout">Salir</a>
     </nav>
     <div class="header-user" style="display:flex;align-items:center;gap:.75rem;font-size:.85rem">

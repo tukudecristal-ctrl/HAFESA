@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cambiar Clave</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .card-header { margin-bottom: 1.8rem; }
+    .card-header h1 { font-size: 1.4rem; color: #1a202c; }
+    .card-header p  { color: #718096; font-size: .88rem; margin-top: .3rem; }
+
+    .form-group { margin-bottom: 1.1rem; }
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: .35rem;
+    }
+    input {
+      width: 100%;
+      padding: .6rem .8rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 16px;
+      color: #2d3748;
+    }
+    input:focus { outline: none; border-color: #4299e1; box-shadow: 0 0 0 3px rgba(66,153,225,.15); }
+    input.error  { border-color: #e53e3e; }
+
+    .msg-error { color: #e53e3e; font-size: .78rem; margin-top: .3rem; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .7rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 1.4rem;
+      transition: background .2s, opacity .2s;
+    }
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #2b6cb0; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .alert { border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; margin-top: 1rem; }
+    .alert-success { background: #c6f6d5; color: #22543d; }
+    .alert-error   { background: #fed7d7; color: #742a2a; }
+
+    .footer-link { text-align: center; margin-top: 1.2rem; font-size: .85rem; }
+    .footer-link a { color: #3182ce; text-decoration: none; }
+    .footer-link a:hover { text-decoration: underline; }
+
+    .spinner {
+      display: inline-block; width: 15px; height: 15px;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 5px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="card">
+    <div class="card-header">
+      <h1>🔑 Cambiar Clave</h1>
+      <p v-if="user">Hola, <strong>{{ user.nombre }}</strong></p>
+    </div>
+
+    <form @submit.prevent="guardar">
+      <div class="form-group">
+        <label>Clave actual</label>
+        <input type="password" v-model="form.clave_actual" :class="{ error: err.clave_actual }" autocomplete="current-password" />
+        <p class="msg-error" v-if="err.clave_actual">{{ err.clave_actual }}</p>
+      </div>
+      <div class="form-group">
+        <label>Nueva clave</label>
+        <input type="password" v-model="form.nueva_clave" :class="{ error: err.nueva_clave }" autocomplete="new-password" />
+        <p class="msg-error" v-if="err.nueva_clave">{{ err.nueva_clave }}</p>
+      </div>
+      <div class="form-group">
+        <label>Confirmar nueva clave</label>
+        <input type="password" v-model="form.confirmar" :class="{ error: err.confirmar }" autocomplete="new-password" />
+        <p class="msg-error" v-if="err.confirmar">{{ err.confirmar }}</p>
+      </div>
+
+      <div class="alert alert-success" v-if="exito">✅ Clave actualizada correctamente.</div>
+      <div class="alert alert-error"   v-if="errorApi">⚠️ {{ errorApi }}</div>
+
+      <button class="btn btn-primary" type="submit" :disabled="enviando">
+        <span class="spinner" v-if="enviando"></span>
+        {{ enviando ? 'Guardando...' : 'Cambiar clave' }}
+      </button>
+    </form>
+
+    <div class="footer-link">
+      <a :href="rutaVolver">← Volver</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = (location.port === '3000') ? 'http://localhost:8000/api' : '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const user    = ref(null)
+    const enviando = ref(false)
+    const exito    = ref(false)
+    const errorApi = ref('')
+
+    const form = reactive({ clave_actual: '', nueva_clave: '', confirmar: '' })
+    const err  = reactive({ clave_actual: '', nueva_clave: '', confirmar: '' })
+
+    const rutaVolver = computed(() => {
+      if (!user.value) return 'index.html'
+      if (user.value.rol === 'vendedor')   return 'mis_ventas.html'
+      if (user.value.rol === 'logistica')  return 'backoffice.html'
+      return 'backoffice.html'
+    })
+
+    function validar() {
+      err.clave_actual = form.clave_actual ? '' : 'Ingresa tu clave actual'
+      err.nueva_clave  = form.nueva_clave.length >= 4 ? '' : 'La nueva clave debe tener al menos 4 caracteres'
+      err.confirmar    = form.nueva_clave === form.confirmar ? '' : 'Las claves no coinciden'
+      return !err.clave_actual && !err.nueva_clave && !err.confirmar
+    }
+
+    async function guardar() {
+      errorApi.value = ''
+      exito.value    = false
+      if (!validar()) return
+      enviando.value = true
+      try {
+        const res = await Auth.fetch(`${API}/auth/cambiar-clave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clave_actual: form.clave_actual, nueva_clave: form.nueva_clave }),
+        })
+        const data = await res.json()
+        if (!res.ok) { errorApi.value = data.detail || 'Error al cambiar la clave'; return }
+        exito.value = true
+        form.clave_actual = ''
+        form.nueva_clave  = ''
+        form.confirmar    = ''
+      } catch {
+        errorApi.value = 'No se pudo conectar con el servidor'
+      } finally {
+        enviando.value = false
+      }
+    }
+
+    onMounted(() => {
+      user.value = Auth.require()
+    })
+
+    return { user, form, err, enviando, exito, errorApi, rutaVolver, guardar }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

@@ -33,6 +33,10 @@ class UsuarioUpdate(BaseModel):
 class UsuarioPasswordReset(BaseModel):
     password: str
 
+class CambiarClaveInput(BaseModel):
+    clave_actual: str
+    nueva_clave: str
+
 class UsuarioOut(BaseModel):
     id: int
     dni: str

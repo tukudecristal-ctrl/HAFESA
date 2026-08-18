@@ -84,6 +84,7 @@
       <a href="backoffice.html">← Backoffice</a>
       <a href="crud_proveedores.html">Proveedores</a>
       <a href="crud_productos.html">Productos</a>
+      <a href="cambiar_clave.html">🔑 Clave</a>
     </nav>
     <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
   </header>
@@ -117,10 +118,6 @@
         <div class="form-group">
           <label>Costo transporte (S/)</label>
           <input type="number" v-model.number="form.costo_transporte" min="0" step="0.01" placeholder="0.00" />
-        </div>
-        <div class="form-group">
-          <label>Costo impuesto (S/)</label>
-          <input type="number" v-model.number="form.costo_impuesto" min="0" step="0.01" placeholder="0.00" />
         </div>
         <div class="form-group">
           <label>Otros costos (S/)</label>
@@ -173,7 +170,6 @@
       <div class="totales" style="margin-top:1rem">
         <div class="fila"><span>Subtotal items</span><span>S/ {{ fmt(subtotalItems) }}</span></div>
         <div class="fila"><span>Transporte</span><span>S/ {{ fmt(form.costo_transporte || 0) }}</span></div>
-        <div class="fila"><span>Impuesto</span><span>S/ {{ fmt(form.costo_impuesto || 0) }}</span></div>
         <div class="fila"><span>Otros</span><span>S/ {{ fmt(form.otros_costos || 0) }}</span></div>
         <div class="fila gran-total"><span>TOTAL</span><span>S/ {{ fmt(totalGeneral) }}</span></div>
       </div>
@@ -214,7 +210,6 @@ createApp({
       fecha_compra:     new Date().toISOString().slice(0, 10),
       proveedor_id:     null,
       costo_transporte: 0,
-      costo_impuesto:   0,
       otros_costos:     0,
       observaciones:    '',
     })
@@ -227,7 +222,6 @@ createApp({
     const totalGeneral = computed(() =>
       subtotalItems.value +
       (form.costo_transporte || 0) +
-      (form.costo_impuesto   || 0) +
       (form.otros_costos     || 0)
     )
     const formularioValido = computed(() =>
@@ -257,7 +251,6 @@ createApp({
           proveedor_id:     form.proveedor_id || null,
           fecha_compra:     form.fecha_compra,
           costo_transporte: form.costo_transporte || 0,
-          costo_impuesto:   form.costo_impuesto   || 0,
           otros_costos:     form.otros_costos     || 0,
           observaciones:    form.observaciones    || null,
           detalles: items.value.map(i => ({
@@ -296,7 +289,6 @@ createApp({
     function resetForm() {
       form.proveedor_id     = null
       form.costo_transporte = 0
-      form.costo_impuesto   = 0
       form.otros_costos     = 0
       form.observaciones    = ''
       items.value = [{ producto_id: '', cantidad: 1, costo_unitario: 0 }]
