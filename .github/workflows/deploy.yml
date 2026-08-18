@@ -16,7 +16,8 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
             cd /home/hafesa/app
-            git pull origin main
+            git fetch origin
+            git merge origin/main
             source venv/bin/activate
             pip install -r backend/requirements.txt -q
             sudo systemctl restart hafesa
