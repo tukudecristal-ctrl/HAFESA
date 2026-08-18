@@ -55,6 +55,103 @@
 
     .empty { text-align: center; padding: 3rem; color: #a0aec0; }
     .spinner-wrap { text-align: center; padding: 3rem; color: #718096; }
+
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    .btn-hamburger-mv { display: none; }
+
+    @media (max-width: 640px) {
+      /* Header */
+      header { flex-wrap: wrap; padding: .7rem 1rem; gap: .4rem; }
+      header h1 { font-size: 1rem; flex: 1; }
+      .header-right {
+        width: 100%;
+        justify-content: flex-end;
+        gap: .5rem;
+        font-size: .82rem;
+      }
+      .user-badge { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      /* Container */
+      .container { padding: .75rem; }
+
+      /* Stats: 2 columnas */
+      .stats {
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem;
+        margin-bottom: .75rem;
+      }
+      .stat-card { padding: .75rem; }
+      .stat-val { font-size: 1.3rem; }
+
+      /* Toolbar */
+      .toolbar { flex-direction: column; gap: .5rem; margin-bottom: .75rem; }
+      .toolbar input, .toolbar select { min-width: 100%; font-size: 16px !important; }
+
+      /* Tabla → tarjetas */
+      .card { border-radius: 0; box-shadow: none; background: transparent; }
+      table, tbody { display: block; }
+      thead { display: none; }
+
+      tbody tr {
+        display: block;
+        background: #fff;
+        border-radius: 10px;
+        margin-bottom: .75rem;
+        padding: .75rem;
+        padding-right: 8rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        position: relative;
+      }
+      tbody tr:hover td { background: transparent; }
+
+      tbody td {
+        display: block;
+        border-top: none;
+        padding: .1rem 0;
+        width: 100%;
+        font-size: .88rem;
+      }
+
+      /* #ID */
+      tbody td:nth-child(1) {
+        display: inline-block; width: auto;
+        font-size: .95rem; font-weight: 700; color: #2b6cb0;
+        margin-right: .4rem;
+      }
+      /* Cliente (con fecha registro debajo) */
+      tbody td:nth-child(2) { margin-top: .4rem; font-size: .92rem; }
+      /* Productos */
+      tbody td:nth-child(3) { margin-top: .3rem; }
+      /* Estado — absoluto top-right */
+      tbody td:nth-child(4) {
+        position: absolute; top: .75rem; right: .75rem;
+        width: auto; padding: 0;
+      }
+      /* Fecha estado */
+      tbody td:nth-child(5) {
+        font-size: .75rem; color: #718096; margin-top: .15rem;
+      }
+      tbody td:nth-child(5)::before { content: 'Últ. estado: '; font-weight: 600; }
+      /* Total */
+      tbody td:nth-child(6) {
+        display: inline-block; width: 47%;
+        margin-top: .4rem; color: #4a5568; font-size: .85rem; vertical-align: top;
+      }
+      tbody td:nth-child(6)::before { content: 'Total'; display: block; font-size: .68rem; color: #a0aec0; text-transform: uppercase; }
+      /* Resta pagar */
+      tbody td:nth-child(7) {
+        display: inline-block; width: 47%;
+        margin-top: .4rem; text-align: right; vertical-align: top;
+      }
+      tbody td:nth-child(7)::before { content: 'Resta'; display: block; font-size: .68rem; color: #a0aec0; text-transform: uppercase; }
+      /* Comisión */
+      tbody td:nth-child(8) {
+        margin-top: .4rem;
+        padding-top: .4rem;
+        border-top: 1px solid #e2e8f0 !important;
+      }
+      tbody td:nth-child(8)::before { content: 'Comisión: '; font-size: .75rem; color: #718096; font-weight: 600; }
+    }
   </style>
 </head>
 <body>
@@ -102,7 +199,7 @@
         <option value="">Todos los estados</option>
         <option value="REGISTRADO">📋 Registrado</option>
         <option value="EMPACADO">📦 Empacado</option>
-        <option value="ROTULO_IMPRESO">🏷 Rótulo impreso</option>
+        <option value="ROTULO_IMPRESO">🏷 Rotulado</option>
         <option value="DEPOSITADO">🚚 Depositado</option>
         <option value="ENTREGADO">✅ Entregado</option>
         <option value="CANCELADO">❌ Cancelado</option>
@@ -139,7 +236,7 @@
                 </div>
               </div>
             </td>
-            <td><span class="badge" :class="`badge-${p.estado}`">{{ p.estado.replace('_', ' ') }}</span></td>
+            <td><span class="badge" :class="`badge-${p.estado}`">{{ estadoLabel(p.estado) }}</span></td>
             <td style="font-size:.82rem;">{{ fmtFecha(p.fecha_estado) || '—' }}</td>
             <td>S/ {{ fmt(p.precio_total) }}</td>
             <td><strong>S/ {{ fmt(p.resta_pagar) }}</strong></td>
@@ -182,6 +279,11 @@ createApp({
       )
     })
 
+    function estadoLabel(e) {
+      const MAP = { ROTULO_IMPRESO: 'ROTULADO' }
+      return MAP[e] || e.replace('_', ' ')
+    }
+
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
     function fmtFecha(ts) {
@@ -208,7 +310,7 @@ createApp({
       cargando.value = false
     })
 
-    return { user, pedidos, pedidosFiltrados, resumen, cargando, busqueda, filtroEstado, fmt, fmtFecha, logout }
+    return { user, pedidos, pedidosFiltrados, resumen, cargando, busqueda, filtroEstado, fmt, fmtFecha, logout, estadoLabel }
   }
 }).mount('#app')
 </script>

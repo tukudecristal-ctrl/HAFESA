@@ -28,9 +28,22 @@
       max-width: 860px;
     }
 
-    .card-header { text-align: center; margin-bottom: 1.8rem; }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.8rem;
+      gap: 1rem;
+    }
     .card-header h1 { font-size: 1.5rem; color: #1a202c; }
     .card-header p  { color: #718096; font-size: .9rem; margin-top: .3rem; }
+    .card-header-nav {
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+      font-size: .85rem;
+      flex-shrink: 0;
+    }
 
     .section-title {
       font-size: .75rem;
@@ -211,21 +224,122 @@
       margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      body { padding: .5rem 0; }
+
+      .card {
+        border-radius: 0;
+        padding: 1rem;
+        box-shadow: none;
+        min-height: 100vh;
+      }
+
+      .card-header {
+        flex-direction: column;
+        gap: .4rem;
+        margin-bottom: 1rem;
+      }
+      .card-header-nav {
+        flex-wrap: wrap;
+        font-size: .8rem;
+        gap: .4rem;
+      }
+
+      .row2, .row3 { grid-template-columns: 1fr; gap: 0; }
+
+      /* Evita zoom automático en iOS al enfocar inputs */
+      input, select, textarea { font-size: 16px !important; }
+
+      /* Tabla de productos → tarjetas */
+      .items-table-wrap { overflow-x: visible; }
+      .items-table thead { display: none; }
+      .items-table,
+      .items-table tbody { display: block; }
+
+      .items-table tr {
+        display: block;
+        position: relative;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        padding: .75rem;
+        padding-right: 2.5rem; /* espacio para botón eliminar */
+        margin-bottom: .75rem;
+        background: #fafafa;
+      }
+
+      .items-table td {
+        display: block;
+        border-top: none;
+        padding: .15rem 0;
+        width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+      }
+
+      /* Botón eliminar: esquina superior derecha de la tarjeta */
+      .col-del {
+        position: absolute;
+        top: .4rem;
+        right: .4rem;
+        width: auto;
+        text-align: right;
+        padding: 0;
+      }
+
+      /* Cantidad y Subtotal lado a lado */
+      .items-table td.col-qty {
+        display: inline-block;
+        width: 44%;
+        vertical-align: top;
+        margin-top: .5rem;
+        padding-right: .5rem;
+      }
+      .items-table td.col-subtotal {
+        display: inline-block;
+        width: 50%;
+        vertical-align: top;
+        margin-top: .5rem;
+      }
+      /* Precio unitario se omite en móvil (el subtotal lo representa) */
+      .items-table td.col-precio { display: none !important; }
+
+      /* Mini-etiquetas encima de cantidad y subtotal */
+      .items-table td.col-qty::before {
+        content: 'Cantidad';
+        display: block;
+        font-size: .68rem;
+        font-weight: 700;
+        color: #718096;
+        text-transform: uppercase;
+        margin-bottom: .2rem;
+      }
+      .items-table td.col-subtotal::before {
+        content: 'Subtotal';
+        display: block;
+        font-size: .68rem;
+        font-weight: 700;
+        color: #718096;
+        text-transform: uppercase;
+        margin-bottom: .2rem;
+      }
+    }
   </style>
 </head>
 <body>
 <div id="app">
   <div class="card">
-    <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div class="card-header">
       <div>
         <h1>Nuevo Pedido</h1>
         <p>Completa el formulario para registrar un pedido</p>
       </div>
-      <div style="display:flex;gap:.75rem;align-items:center;font-size:.85rem">
+      <div class="card-header-nav">
         <a v-if="currentUser?.rol === 'vendedor'" href="mis_ventas.html" style="color:#2b6cb0;text-decoration:none;font-weight:600">📊 Mis ventas</a>
         <a v-else href="backoffice.html" style="color:#2b6cb0;text-decoration:none;font-weight:600">← Backoffice</a>
-        <span style="color:#4a5568">{{ currentUser?.nombre }}</span>
-        <button type="button" @click="logout" style="background:#e2e8f0;border:none;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem">Salir</button>
+        <span style="color:#4a5568;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">{{ currentUser?.nombre }}</span>
+        <button type="button" @click="logout" style="background:#e2e8f0;border:none;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;white-space:nowrap">Salir</button>
       </div>
     </div>
 
@@ -567,24 +681,34 @@ createApp({
       if (!user) return
       currentUser.value = user
 
-      const [empRes] = await Promise.all([
-        Auth.fetch(`${API}/catalogos/empresas`),
-      ])
+      const empRes = await Auth.fetch(`${API}/catalogos/empresas`)
       empresas.value = await empRes.json()
 
-      // Cargar agencias y departamentos
       await cargarAgencias()
       await cargarDepartamentos()
 
-      // Si el usuario es vendedor: preseleccionar empresa y vendedor
+      // Para vendedores: preseleccionar su propia empresa y su registro de vendedor
       if (user.rol === 'vendedor' && user.vendedor_id) {
         const vendRes = await Auth.fetch(`${API}/catalogos/vendedores?todos=true`)
-        const todosVendedores = vendRes ? await vendRes.json() : []
-        const miVendedor = todosVendedores.find(v => v.id === user.vendedor_id)
+        const todos = vendRes ? await vendRes.json() : []
+        const miVendedor = todos.find(v => v.id === user.vendedor_id)
         if (miVendedor) {
           form.empresa_id  = miVendedor.empresa_id
           await onEmpresaChange()
           form.vendedor_id = user.vendedor_id
+          return
+        }
+      }
+
+      // Para todos los demás: preseleccionar "VIISA VERDE SAC" por defecto
+      const viisa = empresas.value.find(e => e.nombre.toUpperCase().includes('VIISA'))
+      if (viisa) {
+        form.empresa_id = viisa.id
+        await onEmpresaChange()
+        // Si el usuario tiene vendedor asignado en esa empresa, preseleccionarlo
+        if (user.vendedor_id) {
+          const ok = vendedoresEmpresa.value.some(v => v.id === user.vendedor_id)
+          if (ok) form.vendedor_id = user.vendedor_id
         }
       }
     }

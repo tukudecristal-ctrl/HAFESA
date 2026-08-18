@@ -116,6 +116,107 @@
       .print-title { display: block !important; }
     }
     .print-title { display: none; font-size: 1rem; font-weight: 700; color: #1a202c; margin-bottom: .5rem; }
+
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      /* Header */
+      header { flex-wrap: wrap; padding: .7rem 1rem; gap: .4rem; align-items: center; }
+      header h1 { font-size: 1rem; flex: 1; }
+      header nav { display: flex; flex-wrap: wrap; gap: .3rem; order: 10; width: 100%; border-top: 1px solid rgba(255,255,255,.2); padding-top: .4rem; margin-top: .2rem; }
+      header nav a { margin-left: 0; font-size: .85rem; }
+
+      /* Container */
+      .container { padding: .75rem; }
+
+      /* Stats: 2×2 */
+      .stats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .75rem; }
+      .stat-card { padding: .65rem .75rem; min-width: 0; }
+      .stat-card .num { font-size: 1.2rem; }
+      .stat-card .lbl { font-size: .7rem; }
+
+      /* Toolbar */
+      .toolbar { flex-direction: column; gap: .5rem; margin-bottom: .75rem; }
+      .toolbar select { min-width: 100%; font-size: 16px !important; }
+      .toolbar > span { display: none; } /* hide the info text */
+
+      /* Tabla resumen → tarjetas */
+      .card { border-radius: 8px; }
+      .card table, .card tbody { display: block; }
+      .card thead { display: none; }
+
+      .card tbody tr {
+        display: block;
+        padding: .75rem;
+        border-top: 1px solid #e2e8f0;
+        position: relative;
+      }
+      .card tbody tr:first-child { border-top: none; }
+      .card tbody tr:hover td { background: transparent; }
+
+      .card tbody td {
+        display: block;
+        border-top: none;
+        padding: .1rem 0;
+        font-size: .88rem;
+      }
+
+      /* ── Resumen table: cols Vendedor, Empresa, %, Pedidos, Ventas, Comisión, Btn ── */
+      /* Vendedor */
+      .card tbody td:nth-child(1) { font-size: .95rem; font-weight: 700; }
+      /* Empresa */
+      .card tbody td:nth-child(2) { font-size: .78rem; color: #718096; }
+      /* % + Pedidos inline */
+      .card tbody td:nth-child(3) {
+        display: inline-block; width: 45%;
+        margin-top: .3rem; font-size: .82rem; color: #4a5568; vertical-align: top;
+      }
+      .card tbody td:nth-child(3)::before { content: 'Comisión '; font-size: .68rem; color: #a0aec0; display: block; text-transform: uppercase; }
+      .card tbody td:nth-child(4) {
+        display: inline-block; width: 45%;
+        margin-top: .3rem; font-size: .82rem; color: #4a5568; vertical-align: top;
+      }
+      .card tbody td:nth-child(4)::before { content: 'Pedidos'; font-size: .68rem; color: #a0aec0; display: block; text-transform: uppercase; }
+      /* Ventas netas */
+      .card tbody td:nth-child(5) {
+        display: inline-block; width: 45%;
+        margin-top: .35rem; font-size: .85rem; vertical-align: top;
+      }
+      .card tbody td:nth-child(5)::before { content: 'Ventas'; font-size: .68rem; color: #a0aec0; display: block; text-transform: uppercase; }
+      /* Comisión pendiente */
+      .card tbody td:nth-child(6) {
+        display: inline-block; width: 50%;
+        margin-top: .35rem; text-align: right; vertical-align: top;
+      }
+      .card tbody td:nth-child(6)::before { content: 'A pagar'; font-size: .68rem; color: #a0aec0; display: block; text-transform: uppercase; }
+      /* Botón ver detalle */
+      .card tbody td:nth-child(7) { margin-top: .5rem; }
+      .card tbody td:nth-child(7) .btn { width: 100%; }
+
+      /* ── Detalle header ── */
+      .detalle-header { padding: .75rem; gap: .5rem; }
+      .pct-badge { margin-left: 0; }
+
+      /* ── Detalle tabla: checkbox, #, Cliente, F.Reg, F.Entregado, Total, Desc, Neto, Comision ── */
+      /* Reusar los mismos estilos de .card tbody... pero la tabla detalle tiene orden diferente */
+      /* td:1=checkbox, td:2=#, td:3=Cliente, td:4=F.Reg, td:5=F.Entr, td:6=Total, td:7=Desc, td:8=Neto, td:9=Comision */
+
+      /* Consolidado */
+      .consolidado { flex-direction: column; gap: .5rem; align-items: flex-start; padding: .75rem; }
+      .consolidado .item { text-align: left; }
+
+      /* Acciones detalle */
+      .acciones-detalle { flex-direction: column; gap: .5rem; }
+      .acciones-detalle .spacer { display: none; }
+      .acciones-detalle .btn { width: 100%; }
+
+      /* Modal: ajuste de padding */
+      .modal { padding: 1.2rem; margin: .75rem; max-width: none; width: auto; }
+      .modal-acciones { flex-direction: column; }
+      .modal-acciones .btn { width: 100%; }
+
+      /* Inputs: prevent iOS zoom */
+      input, select { font-size: 16px !important; }
+    }
   </style>
 </head>
 <body>

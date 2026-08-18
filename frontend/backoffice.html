@@ -176,9 +176,160 @@
       transition: opacity .3s;
     }
 
-    @media (max-width: 768px) {
-      .filtros { flex-direction: column; }
-      .filtros select, .filtros input { min-width: 100%; }
+    /* ─── Hamburger (hidden on desktop) ───────────────────── */
+    .btn-hamburger { display: none; }
+    .nav-salir-mobile { display: none; }
+
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      /* Header */
+      header {
+        flex-wrap: wrap;
+        padding: .7rem 1rem;
+        gap: 0;
+        align-items: center;
+        position: relative;
+      }
+      header h1 { font-size: 1rem; flex: 1; }
+
+      .btn-hamburger {
+        display: block;
+        background: rgba(255,255,255,.2);
+        border: none;
+        color: #fff;
+        font-size: 1.2rem;
+        line-height: 1;
+        padding: .35rem .65rem;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-left: .5rem;
+      }
+
+      .header-user { display: none !important; }
+      /* Badge en stats: texto más pequeño y sin overflow */
+      .stat-card .lbl .badge { font-size: .58rem; padding: .15rem .4rem; white-space: normal; word-break: break-word; }
+
+      header nav {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        order: 10;
+        padding-top: .5rem;
+        margin-top: .5rem;
+        border-top: 1px solid rgba(255,255,255,.25);
+      }
+      header nav.nav-open { display: flex; }
+      header nav a {
+        margin-left: 0;
+        padding: .55rem 0;
+        font-size: .92rem;
+        border-bottom: 1px solid rgba(255,255,255,.1);
+      }
+      header nav a:last-child { border-bottom: none; }
+      .nav-salir-mobile { display: block !important; color: #fbb6b6 !important; }
+
+      /* Container */
+      .container { padding: .75rem; }
+
+      /* Stats: rejilla 3×2, compacta */
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; margin-bottom: .75rem; }
+      .stat-card { padding: .5rem .6rem; min-width: 0; }
+      .stat-card .num   { font-size: 1.25rem; }
+      .stat-card .lbl   { font-size: .62rem; }
+      .stat-card .icono { font-size: 1rem; margin-bottom: .1rem; }
+
+      /* Filtros */
+      .filtros { flex-direction: column; padding: .75rem; gap: .5rem; margin-bottom: .75rem; }
+      .filtros > div { width: 100%; }
+      .filtros select, .filtros input { min-width: 100%; font-size: 16px !important; }
+      .filtros > div:last-child { display: flex; gap: .4rem; flex-wrap: wrap; }
+      .btn-filtro { flex: 1; min-width: 0; }
+
+      /* Tabla → tarjetas */
+      .tabla-wrap { background: transparent; border-radius: 0; box-shadow: none; overflow-x: visible; }
+      table, tbody { display: block; }
+      thead { display: none; }
+
+      tbody tr {
+        display: block;
+        background: #fff;
+        border-radius: 10px;
+        margin-bottom: .75rem;
+        padding: .75rem;
+        padding-right: 8.5rem; /* espacio para badge estado (top-right) */
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        position: relative;
+      }
+      tbody tr:hover td { background: transparent; }
+
+      tbody td {
+        display: block;
+        border-top: none;
+        padding: .1rem 0;
+        width: 100%;
+        box-sizing: border-box;
+        font-size: .88rem;
+      }
+
+      /* #ID */
+      tbody td:nth-child(1) {
+        display: inline-block;
+        width: auto;
+        font-size: .95rem;
+        color: #2b6cb0;
+        margin-right: .4rem;
+      }
+      /* Fecha */
+      tbody td:nth-child(2) {
+        display: inline-block;
+        width: auto;
+        font-size: .75rem;
+        color: #718096;
+      }
+      /* Cliente */
+      tbody td:nth-child(3) { margin-top: .45rem; font-size: .92rem; }
+      /* Vendedor */
+      tbody td:nth-child(4) { font-size: .78rem; color: #718096; }
+      tbody td:nth-child(4)::before { content: 'Vendedor: '; font-weight: 600; }
+      /* Producto */
+      tbody td:nth-child(5) { font-size: .82rem; max-width: none !important; margin-top: .3rem; }
+      /* Cantidad — ya visible como ×N dentro del producto */
+      tbody td:nth-child(6) { display: none; }
+      /* Total */
+      tbody td:nth-child(7) {
+        display: inline-block;
+        width: 47%;
+        margin-top: .4rem;
+        color: #4a5568;
+        font-size: .85rem;
+      }
+      tbody td:nth-child(7)::before { content: 'Total  '; color: #a0aec0; font-size: .72rem; display: block; }
+      /* Resta */
+      tbody td:nth-child(8) {
+        display: inline-block;
+        width: 47%;
+        margin-top: .4rem;
+        text-align: right;
+        font-size: .9rem;
+        vertical-align: top;
+      }
+      tbody td:nth-child(8)::before { content: 'Resta'; color: #a0aec0; font-size: .72rem; display: block; }
+      /* Estado — absoluto esquina superior derecha */
+      tbody td:nth-child(9) {
+        position: absolute;
+        top: .75rem;
+        right: .75rem;
+        width: auto;
+        padding: 0;
+      }
+      /* Acciones */
+      tbody td:nth-child(10) {
+        margin-top: .5rem;
+        padding-top: .5rem;
+        border-top: 1px solid #e2e8f0 !important;
+      }
+      .acciones { gap: .35rem; }
+      .btn-accion { font-size: .82rem; padding: .38rem .7rem; }
     }
   </style>
 </head>
@@ -187,15 +338,17 @@
 
   <header>
     <h1>📦 Gestión de Pedidos</h1>
-    <nav>
-      <a href="formulario_pedido.html">+ Nuevo Pedido</a>
-      <a href="compras.html">Compras</a>
-      <a href="comisiones.html">💰 Comisiones</a>
-      <a href="crud_proveedores.html">Proveedores</a>
-      <a href="crud_empresas.html">Empresas</a>
-      <a href="crud_usuarios.html">Usuarios</a>
+    <button class="btn-hamburger" @click="navOpen = !navOpen" aria-label="Menú">☰</button>
+    <nav :class="{ 'nav-open': navOpen }">
+      <a href="formulario_pedido.html" @click="navOpen = false">+ Nuevo Pedido</a>
+      <a href="compras.html"           @click="navOpen = false">Compras</a>
+      <a href="comisiones.html"        @click="navOpen = false">💰 Comisiones</a>
+      <a href="crud_proveedores.html"  @click="navOpen = false">Proveedores</a>
+      <a href="crud_empresas.html"     @click="navOpen = false">Empresas</a>
+      <a href="crud_usuarios.html"     @click="navOpen = false">Usuarios</a>
+      <a href="#" class="nav-salir-mobile" @click.prevent="logout">Salir</a>
     </nav>
-    <div style="display:flex;align-items:center;gap:.75rem;font-size:.85rem">
+    <div class="header-user" style="display:flex;align-items:center;gap:.75rem;font-size:.85rem">
       <span style="color:#bee3f8">{{ currentUser?.nombre }}</span>
       <button @click="logout" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem">Salir</button>
     </div>
@@ -208,7 +361,7 @@
       <div class="stat-card" v-for="(count, estado) in conteoEstados" :key="estado">
         <div class="icono">{{ iconosEstado[estado] }}</div>
         <div class="num">{{ count }}</div>
-        <div class="lbl"><span :class="`badge badge-${estado}`">{{ estado.replace('_', ' ') }}</span></div>
+        <div class="lbl"><span :class="`badge badge-${estado}`">{{ estadoLabel(estado) }}</span></div>
       </div>
     </div>
 
@@ -225,7 +378,7 @@
         <label>Estado</label>
         <select v-model="filtros.estado">
           <option value="">Todos</option>
-          <option v-for="s in estados" :key="s" :value="s">{{ s.replace('_', ' ') }}</option>
+          <option v-for="s in estados" :key="s" :value="s">{{ estadoLabel(s) }}</option>
         </select>
       </div>
       <div>
@@ -282,7 +435,7 @@
             <td>{{ p.detalles && p.detalles.length ? p.detalles.reduce((s,d)=>s+d.cantidad,0) : (p.cantidad || '—') }}</td>
             <td>S/ {{ fmt(p.precio_total) }}</td>
             <td><strong>S/ {{ fmt(p.resta_pagar) }}</strong></td>
-            <td><span :class="`badge badge-${p.estado}`">{{ p.estado.replace('_', ' ') }}</span></td>
+            <td><span :class="`badge badge-${p.estado}`">{{ estadoLabel(p.estado) }}</span></td>
             <td>
               <div class="acciones">
                 <button
@@ -324,12 +477,13 @@ const { createApp, ref, reactive, computed, onMounted } = Vue
 
 createApp({
   setup() {
-    const empresas = ref([])
-    const pedidos  = ref([])
-    const cargando  = ref(false)
-    const avanzando = ref(null)
+    const empresas   = ref([])
+    const pedidos    = ref([])
+    const cargando   = ref(false)
+    const avanzando  = ref(null)
     const cancelando = ref(null)
-    const toast    = ref('')
+    const toast      = ref('')
+    const navOpen    = ref(false)
     const estados  = ['REGISTRADO', 'EMPACADO', 'ROTULO_IMPRESO', 'DEPOSITADO', 'ENTREGADO', 'CANCELADO']
 
     const iconosEstado = {
@@ -399,8 +553,8 @@ createApp({
     }
 
     async function avanzarEstado(pedido) {
-      if (!confirm(`¿Avanzar pedido #${pedido.id} de "${pedido.estado}" al siguiente estado?`)) return
       avanzando.value = pedido.id
+      const estadoAntes = pedido.estado
       try {
         const res = await Auth.fetch(`${API}/pedidos/${pedido.id}/avanzar`, {
           method: 'POST',
@@ -411,7 +565,7 @@ createApp({
         if (res.ok) {
           const idx = pedidos.value.findIndex(p => p.id === pedido.id)
           if (idx !== -1) pedidos.value[idx] = data
-          mostrarToast(`✅ Pedido #${pedido.id} → ${data.estado}`)
+          mostrarToast(`✅ #${pedido.id}: ${estadoLabel(estadoAntes)} → ${estadoLabel(data.estado)}`)
         } else {
           mostrarToast(`⚠️ ${data.detail}`)
         }
@@ -455,6 +609,11 @@ createApp({
       filtros.fecha_desde = ''
       filtros.fecha_hasta = ''
       cargarPedidos()
+    }
+
+    function estadoLabel(e) {
+      const MAP = { ROTULO_IMPRESO: 'ROTULADO' }
+      return MAP[e] || e.replace('_', ' ')
     }
 
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -537,8 +696,8 @@ createApp({
 
     return {
       empresas, pedidos, filtros, estados, iconosEstado, cargando, avanzando, cancelando, toast, conteoEstados,
-      vendedoresMap, productosMap, currentUser,
-      cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, exportarRotulosExcel, fmtFecha, fmt, logout,
+      vendedoresMap, productosMap, currentUser, navOpen,
+      cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, exportarRotulosExcel, fmtFecha, fmt, logout, estadoLabel,
     }
   }
 }).mount('#app')
