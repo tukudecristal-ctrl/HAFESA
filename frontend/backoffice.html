@@ -447,7 +447,7 @@
                 </button>
                 <button
                   class="btn-accion btn-cancelar btn-icono"
-                  :disabled="['DEPOSITADO','ENTREGADO','CANCELADO'].includes(p.estado) || cancelando === p.id"
+                  :disabled="['ENTREGADO','CANCELADO'].includes(p.estado) || cancelando === p.id"
                   @click="cancelarPedido(p)"
                   title="Cancelar pedido"
                 >
