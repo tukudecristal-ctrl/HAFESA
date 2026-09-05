@@ -84,6 +84,7 @@
     }
     input.error, select.error { border-color: #e53e3e; }
     .msg-error { color: #e53e3e; font-size: .78rem; margin-top: .25rem; }
+    .msg-aviso { color: #2b6cb0; font-size: .78rem; margin-top: .25rem; }
 
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
@@ -389,6 +390,7 @@
           :placeholder="tipoDocumento === 'dni' ? '8 dígitos' : 'Hasta 10 caracteres'"
           :class="{ error: errores.dni }" @blur="buscarCliente" />
         <p class="msg-error" v-if="errores.dni">{{ errores.dni }}</p>
+        <p class="msg-aviso" v-if="avisoDni">ℹ️ {{ avisoDni }}</p>
       </div>
 
       <div class="form-group">
@@ -624,6 +626,7 @@ createApp({
     const agenciaSeleccionada = ref(null)
     const tipoDestino       = ref('shalom')
     const tipoDocumento     = ref('dni')
+    const avisoDni          = ref('')
     const direccionOtraAgencia = ref('')
     const vendedoresEmpresa = ref([])
     const enviando          = ref(false)
@@ -805,12 +808,14 @@ createApp({
     function onTipoDocumentoChange() {
       form.dni = ''
       errores.dni = ''
+      avisoDni.value = ''
     }
 
     // ── Buscar cliente por documento ─────────────────────────────
     async function buscarCliente() {
       errores.dni = ''
       errores.nombre_cliente = ''
+      avisoDni.value = ''
       if (!form.dni.trim()) return
 
       validarDni()
@@ -821,6 +826,12 @@ createApp({
         const res = await Auth.fetch(url)
         if (!res.ok) {
           const err = await res.json()
+          // Para C.E. nuevo (no registrado aún) no bloqueamos la venta:
+          // se deja continuar completando nombre y teléfono a mano.
+          if (tipoDocumento.value === 'ce' && res.status === 404) {
+            avisoDni.value = 'C.E. no registrado aún. Completa nombre y teléfono para continuar la venta.'
+            return
+          }
           errores.dni = err.detail || 'No se encontró el documento'
           return
         }
@@ -960,6 +971,7 @@ createApp({
       form.detalle_observacion   = ''
       tipoDestino.value          = 'shalom'
       tipoDocumento.value        = 'dni'
+      avisoDni.value             = ''
       filtro_departamento.value  = ''
       items.value                = [itemVacio()]
       productos.value            = []
@@ -976,7 +988,7 @@ createApp({
 
     return {
       empresas, productos, agencias, departamentos, filtro_departamento, busquedaAgencia, agenciaSeleccionada, vendedoresEmpresa,
-      agenciasFiltradas, tipoDestino, direccionOtraAgencia, tipoDocumento,
+      agenciasFiltradas, tipoDestino, direccionOtraAgencia, tipoDocumento, avisoDni,
       form, errores, items,
       subtotalItems, itemsValidos, restaPagar, formularioValido,
       enviando, exito, pedidoCreado, errorApi, currentUser,
