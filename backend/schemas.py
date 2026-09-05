@@ -225,6 +225,7 @@ class PedidoCreate(BaseModel):
     vendedor_id: int
     nombre_cliente: str
     dni: str
+    tipo_documento: str = 'dni'
     telefono: str
     detalles: list[DetallePedidoCreate]
     agencia_id: Optional[int] = None
@@ -235,12 +236,14 @@ class PedidoCreate(BaseModel):
     costo_envio: Decimal = Decimal("0.00")
     descuento: Decimal = Decimal("0.00")
 
-    @field_validator("dni")
-    @classmethod
-    def validar_dni(cls, v: str) -> str:
-        if not re.fullmatch(r"\d{8,10}", v):
+    @model_validator(mode="after")
+    def validar_documento(self):
+        if self.tipo_documento == "ce":
+            if not re.fullmatch(r"[A-Za-z0-9]{1,10}", self.dni):
+                raise ValueError("El C.E. debe tener hasta 10 caracteres alfanuméricos")
+        elif not re.fullmatch(r"\d{8,10}", self.dni):
             raise ValueError("El DNI debe tener entre 8 y 10 dígitos numéricos")
-        return v
+        return self
 
     @field_validator("telefono")
     @classmethod
@@ -501,3 +504,4 @@ class ClienteLookup(BaseModel):
     apellido_paterno: str
     apellido_materno: Optional[str]
     nombre_completo: str
+    telefono: Optional[str] = None

@@ -372,8 +372,21 @@
       <p class="section-title">Datos del Cliente</p>
 
       <div class="form-group">
-        <label>DNI <span class="req">*</span></label>
-        <input v-model="form.dni" maxlength="8" placeholder="8 dígitos"
+        <label style="display: flex; align-items: center; justify-content: space-between; gap: .5rem;">
+          <span>Documento <span class="req">*</span></span>
+          <span style="display: inline-flex; gap: 1rem; font-weight: 500;">
+            <label style="display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; margin: 0;">
+              <input type="radio" v-model="tipoDocumento" value="dni" @change="onTipoDocumentoChange" style="width: 15px; height: 15px; margin: 0; cursor: pointer;" />
+              <span style="font-weight: 500;">DNI</span>
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; margin: 0;">
+              <input type="radio" v-model="tipoDocumento" value="ce" @change="onTipoDocumentoChange" style="width: 15px; height: 15px; margin: 0; cursor: pointer;" />
+              <span style="font-weight: 500;">C.E.</span>
+            </label>
+          </span>
+        </label>
+        <input v-model="form.dni" :maxlength="tipoDocumento === 'dni' ? 8 : 10"
+          :placeholder="tipoDocumento === 'dni' ? '8 dígitos' : 'Hasta 10 caracteres'"
           :class="{ error: errores.dni }" @blur="buscarCliente" />
         <p class="msg-error" v-if="errores.dni">{{ errores.dni }}</p>
       </div>
@@ -610,6 +623,7 @@ createApp({
     const busquedaAgencia   = ref('')
     const agenciaSeleccionada = ref(null)
     const tipoDestino       = ref('shalom')
+    const tipoDocumento     = ref('dni')
     const direccionOtraAgencia = ref('')
     const vendedoresEmpresa = ref([])
     const enviando          = ref(false)
@@ -625,7 +639,6 @@ createApp({
       nombre_cliente:      '',
       dni:                 '',
       telefono:            '',
-      tipoDestino:         'shalom',
       agencia_id:          '',
       direccionOtraAgencia: '',
       separacion:          0,
@@ -778,13 +791,23 @@ createApp({
 
     // ── Validaciones ───────────────────────────────────────────
     function validarDni() {
-      errores.dni = /^\d{8}$/.test(form.dni) ? '' : 'DNI debe tener exactamente 8 dígitos'
+      if (tipoDocumento.value === 'ce') {
+        errores.dni = form.dni.trim() && form.dni.trim().length <= 10 ? '' : 'El C.E. debe tener hasta 10 caracteres'
+      } else {
+        errores.dni = /^\d{8}$/.test(form.dni) ? '' : 'DNI debe tener exactamente 8 dígitos'
+      }
     }
     function validarTelefono() {
       errores.telefono = /^9\d{8}$/.test(form.telefono) ? '' : 'Debe tener 9 dígitos y empezar con 9'
     }
 
-    // ── Buscar cliente por DNI ──────────────────────────────────
+    // ── Cambio entre DNI y C.E. ──────────────────────────────────
+    function onTipoDocumentoChange() {
+      form.dni = ''
+      errores.dni = ''
+    }
+
+    // ── Buscar cliente por documento ─────────────────────────────
     async function buscarCliente() {
       errores.dni = ''
       errores.nombre_cliente = ''
@@ -794,14 +817,16 @@ createApp({
       if (errores.dni) return
 
       try {
-        const res = await Auth.fetch(`${API}/clientes/buscar/${form.dni}`)
+        const url = `${API}/clientes/buscar/${encodeURIComponent(form.dni)}?tipo_documento=${tipoDocumento.value}`
+        const res = await Auth.fetch(url)
         if (!res.ok) {
           const err = await res.json()
-          errores.dni = err.detail || 'No se encontró el DNI'
+          errores.dni = err.detail || 'No se encontró el documento'
           return
         }
         const cliente = await res.json()
-        form.nombre_cliente = cliente.nombre_completo
+        if (cliente.nombre_completo) form.nombre_cliente = cliente.nombre_completo
+        if (cliente.telefono) form.telefono = cliente.telefono
       } catch (e) {
         errores.dni = 'Error al buscar cliente: ' + (e.message || 'intenta de nuevo')
       }
@@ -852,11 +877,15 @@ createApp({
     })
 
     const formularioValido = computed(() => {
+      const dniValido = tipoDocumento.value === 'ce'
+        ? form.dni.trim().length > 0 && form.dni.trim().length <= 10
+        : /^\d{8,10}$/.test(form.dni)
+
       const camposBase =
         form.empresa_id &&
         form.vendedor_id &&
         form.nombre_cliente.trim() &&
-        /^\d{8,10}$/.test(form.dni) &&
+        dniValido &&
         /^9\d{8}$/.test(form.telefono)
 
       // Validar según tipo de destino
@@ -881,10 +910,11 @@ createApp({
           vendedor_id:           form.vendedor_id,
           nombre_cliente:        form.nombre_cliente.trim(),
           dni:                   form.dni,
+          tipo_documento:        tipoDocumento.value,
           telefono:              form.telefono,
-          tipo_destino:          form.tipoDestino,
-          agencia_id:            form.tipoDestino === 'shalom' ? form.agencia_id : null,
-          direccion_otra_agencia: form.tipoDestino === 'otro' ? form.direccionOtraAgencia : null,
+          tipo_destino:          tipoDestino.value,
+          agencia_id:            tipoDestino.value === 'shalom' ? (form.agencia_id || null) : null,
+          direccion_otra_agencia: tipoDestino.value === 'otro' ? form.direccionOtraAgencia : null,
           separacion:            form.separacion || 0,
           costo_envio:           form.costo_envio || 0,
           descuento:             form.descuento || 0,
@@ -922,7 +952,6 @@ createApp({
       form.nombre_cliente        = ''
       form.dni                   = ''
       form.telefono              = ''
-      form.tipoDestino           = 'shalom'
       form.agencia_id            = ''
       form.direccionOtraAgencia  = ''
       form.separacion            = 0
@@ -930,6 +959,7 @@ createApp({
       form.descuento             = 0
       form.detalle_observacion   = ''
       tipoDestino.value          = 'shalom'
+      tipoDocumento.value        = 'dni'
       filtro_departamento.value  = ''
       items.value                = [itemVacio()]
       productos.value            = []
@@ -946,14 +976,14 @@ createApp({
 
     return {
       empresas, productos, agencias, departamentos, filtro_departamento, busquedaAgencia, agenciaSeleccionada, vendedoresEmpresa,
-      agenciasFiltradas, tipoDestino, direccionOtraAgencia,
+      agenciasFiltradas, tipoDestino, direccionOtraAgencia, tipoDocumento,
       form, errores, items,
       subtotalItems, itemsValidos, restaPagar, formularioValido,
       enviando, exito, pedidoCreado, errorApi, currentUser,
       onEmpresaChange, onProductoChange, onCantidadChange,
       cargarAgencias, cargarDepartamentos, actualizarAgenciaSeleccionada,
       agregarItem, eliminarItem,
-      validarDni, validarTelefono, buscarCliente, limpiarDestinoOtro,
+      validarDni, validarTelefono, buscarCliente, limpiarDestinoOtro, onTipoDocumentoChange,
       enviar, fmt, logout,
     }
   }

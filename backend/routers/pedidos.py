@@ -17,6 +17,35 @@ TIMESTAMP_POR_ESTADO = {
     "CANCELADO":      "fecha_cancelado",
 }
 
+AGENCIA_OTRA_TER_ID = "OTRA_AGENCIA"
+
+
+def obtener_o_crear_agencia_otra(db: Session) -> models.AgenciaShalom:
+    """
+    Agencia "sentinel" (no proviene de Shalom) usada como agencia_id cuando
+    tipo_destino='otro', para que agencia_id nunca quede vacío/null y toda
+    fila de pedidos mantenga una referencia válida a agencias_shalom.
+    Se marca activo=False para que nunca aparezca en el selector de
+    agencias Shalom ni en los listados/filtros del frontend.
+    """
+    agencia = db.query(models.AgenciaShalom).filter(
+        models.AgenciaShalom.ter_id == AGENCIA_OTRA_TER_ID
+    ).first()
+    if agencia:
+        return agencia
+
+    agencia = models.AgenciaShalom(
+        ter_id=AGENCIA_OTRA_TER_ID,
+        lugar="Otra Agencia",
+        direccion="Destino gestionado manualmente (fuera de la red Shalom)",
+        provincia="N/A",
+        departamento="N/A",
+        activo=False,
+    )
+    db.add(agencia)
+    db.flush()
+    return agencia
+
 
 # ── Listar pedidos ─────────────────────────────────────────────
 @router.get("/", response_model=List[schemas.PedidoOut])
@@ -72,6 +101,13 @@ def crear_pedido(data: schemas.PedidoCreate, db: Session = Depends(get_db)):
     if data.tipo_destino == 'otro' and not data.direccion_otra_agencia:
         raise HTTPException(status_code=400, detail="direccion_otra_agencia requerido cuando tipo_destino='otro'")
 
+    # Para destino 'otro' se imputa la agencia sentinel: agencia_id nunca
+    # queda vacío/null, manteniendo consistencia referencial con agencias_shalom.
+    if data.tipo_destino == 'otro':
+        agencia_id_final = obtener_o_crear_agencia_otra(db).id
+    else:
+        agencia_id_final = data.agencia_id
+
     # Validar productos y calcular precios
     detalles_preparados = []
     for item in data.detalles:
@@ -99,7 +135,7 @@ def crear_pedido(data: schemas.PedidoCreate, db: Session = Depends(get_db)):
         nombre_cliente=data.nombre_cliente,
         dni=data.dni,
         telefono=data.telefono,
-        agencia_id=data.agencia_id,
+        agencia_id=agencia_id_final,
         tipo_destino=data.tipo_destino,
         direccion_otra_agencia=data.direccion_otra_agencia,
         detalle_observacion=data.detalle_observacion,
