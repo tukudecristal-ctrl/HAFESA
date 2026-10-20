@@ -505,3 +505,15 @@ class ClienteLookup(BaseModel):
     apellido_materno: Optional[str]
     nombre_completo: str
     telefono: Optional[str] = None
+
+
+# ── Reporte de ventas ────────────────────────────────────────────
+class ReporteVentaItem(BaseModel):
+    periodo: date
+    empresa: str
+    producto: str
+    stock: int
+    precio_venta: Decimal
+    suma_cantidad: int
+    suma_precio_venta: Decimal
+    suma_comision: Decimal

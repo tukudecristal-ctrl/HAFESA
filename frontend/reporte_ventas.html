@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reporte de Ventas — VERDE</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <script src="xlsx.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 1300px; margin: 0 auto; }
+
+    .toolbar { display: flex; gap: .75rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap; background: #fff; padding: 1rem; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+    .field { display: flex; flex-direction: column; gap: .3rem; }
+    .field label { font-size: .75rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .03em; }
+    .field select, .field input { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; }
+    .tipo-group { display: flex; gap: .4rem; }
+    .tipo-btn { padding: .45rem .9rem; border: 1.5px solid #cbd5e0; border-radius: 7px; background: #fff; font-size: .85rem; font-weight: 600; color: #4a5568; cursor: pointer; }
+    .tipo-btn.activo { background: #3182ce; border-color: #3182ce; color: #fff; }
+    .tipo-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .toolbar .spacer { flex: 1; }
+    .aviso-dia { font-size: .78rem; color: #c05621; margin-top: .2rem; }
+
+    .btn { padding: .5rem 1.1rem; border: none; border-radius: 7px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-success { background: #38a169; color: #fff; }
+    .btn-success:hover { background: #2f855a; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .stats { display: flex; gap: .75rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .stat-card { background: #fff; border-radius: 10px; padding: .75rem 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,.07); flex: 1; min-width: 160px; }
+    .stat-card .num { font-size: 1.4rem; font-weight: 800; color: #2b6cb0; }
+    .stat-card .lbl { font-size: .75rem; color: #718096; margin-top: .1rem; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+    .periodo-header { background: #ebf8ff; padding: .55rem 1rem; font-size: .82rem; font-weight: 800; color: #2c5282; text-transform: uppercase; letter-spacing: .03em; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    thead tr { background: #f7fafc; }
+    th { padding: .6rem 1rem; text-align: left; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #718096; white-space: nowrap; }
+    td { padding: .55rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; white-space: nowrap; }
+    tr:hover td { background: #f7fafc; }
+    .num-col { text-align: right; }
+    .periodo-total td { background: #f7fafc; font-weight: 800; color: #1a202c; border-top: 2px solid #cbd5e0; }
+
+    .empty { text-align: center; padding: 2.5rem; color: #a0aec0; }
+    .loading { text-align: center; padding: 2rem; color: #718096; }
+
+    @media (max-width: 640px) {
+      header { flex-wrap: wrap; padding: .7rem 1rem; gap: .4rem; }
+      header nav { display: flex; flex-wrap: wrap; gap: .5rem; order: 10; width: 100%; }
+      .container { padding: .75rem; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .tipo-group { width: 100%; }
+      .tipo-btn { flex: 1; }
+      .field select, .field input { font-size: 16px; }
+      .card { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>📊 Reporte de Ventas</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+
+    <!-- Filtros -->
+    <div class="toolbar">
+      <div class="field">
+        <label>Empresa</label>
+        <select v-model="filtros.empresaId">
+          <option value="">Todas</option>
+          <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Quiebre</label>
+        <div class="tipo-group">
+          <button class="tipo-btn" :class="{activo: filtros.tipo === 'dia'}"
+                  :disabled="!tipoDiaPermitido" :title="!tipoDiaPermitido ? 'Solo disponible para rangos de hasta 60 días' : ''"
+                  @click="filtros.tipo = 'dia'">Día</button>
+          <button class="tipo-btn" :class="{activo: filtros.tipo === 'mes'}" @click="filtros.tipo = 'mes'">Mes</button>
+          <button class="tipo-btn" :class="{activo: filtros.tipo === 'anio'}" @click="filtros.tipo = 'anio'">Año</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Fecha inicio</label>
+        <input type="date" v-model="filtros.fechaInicio" :max="filtros.fechaFin" />
+      </div>
+
+      <div class="field">
+        <label>Fecha fin</label>
+        <input type="date" v-model="filtros.fechaFin" :max="hoy" />
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn btn-primary" @click="generar" :disabled="cargando || !filtros.fechaInicio">
+        {{ cargando ? 'Generando...' : '🔍 Generar' }}
+      </button>
+      <button class="btn btn-success" @click="exportarExcel" :disabled="!filas.length">
+        📥 Exportar Excel
+      </button>
+    </div>
+    <p class="aviso-dia" v-if="!tipoDiaPermitido && filtros.tipo !== 'dia'">
+      El quiebre por día se habilita solo si el rango es de 60 días o menos (rango actual: {{ diasRango }} días).
+    </p>
+
+    <!-- Stats -->
+    <div class="stats" v-if="filas.length">
+      <div class="stat-card">
+        <div class="num">{{ totalCantidad.toLocaleString('es-PE') }}</div>
+        <div class="lbl">Unidades vendidas</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">S/ {{ fmt(totalVentas) }}</div>
+        <div class="lbl">Total ventas</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" style="color:#38a169">S/ {{ fmt(totalComision) }}</div>
+        <div class="lbl">Total comisión</div>
+      </div>
+    </div>
+
+    <!-- Tabla agrupada por periodo -->
+    <div class="card">
+      <div class="loading" v-if="cargando">Cargando...</div>
+      <template v-else-if="gruposPorPeriodo.length">
+        <div v-for="grupo in gruposPorPeriodo" :key="grupo.periodo">
+          <div class="periodo-header">{{ fmtPeriodo(grupo.periodo) }}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Producto</th>
+                <th class="num-col">Stock Actual</th>
+                <th class="num-col">Precio Actual</th>
+                <th class="num-col">Cantidad</th>
+                <th class="num-col">Ventas</th>
+                <th class="num-col">Comisión</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="f in grupo.items" :key="f.empresa + f.producto">
+                <td>{{ f.empresa }}</td>
+                <td>{{ f.producto }}</td>
+                <td class="num-col">{{ f.stock }}</td>
+                <td class="num-col">S/ {{ fmt(f.precio_venta) }}</td>
+                <td class="num-col">{{ f.suma_cantidad }}</td>
+                <td class="num-col">S/ {{ fmt(f.suma_precio_venta) }}</td>
+                <td class="num-col">S/ {{ fmt(f.suma_comision) }}</td>
+              </tr>
+              <tr class="periodo-total">
+                <td colspan="4">Subtotal {{ fmtPeriodo(grupo.periodo) }}</td>
+                <td class="num-col">{{ grupo.totalCantidad }}</td>
+                <td class="num-col">S/ {{ fmt(grupo.totalVentas) }}</td>
+                <td class="num-col">S/ {{ fmt(grupo.totalComision) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      <div class="empty" v-else>
+        {{ yaGenero ? 'No hay ventas ENTREGADAS en el rango seleccionado.' : 'Elige los filtros y presiona "Generar".' }}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = (location.port === '3000') ? 'http://localhost:8000/api' : '/api'
+const { createApp, ref, reactive, computed, onMounted, watch } = Vue
+
+createApp({
+  setup() {
+    const empresas  = ref([])
+    const filas      = ref([])
+    const cargando   = ref(false)
+    const yaGenero   = ref(false)
+
+    const hoy = new Date().toISOString().slice(0, 10)
+    const hace30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+
+    const filtros = reactive({
+      empresaId:   '',
+      tipo:        'mes',
+      fechaInicio: hace30,
+      fechaFin:    hoy,
+    })
+
+    const diasRango = computed(() => {
+      if (!filtros.fechaInicio || !filtros.fechaFin) return 0
+      const ms = new Date(filtros.fechaFin) - new Date(filtros.fechaInicio)
+      return Math.round(ms / 86400000)
+    })
+    const tipoDiaPermitido = computed(() => diasRango.value >= 0 && diasRango.value <= 60)
+
+    // Si el rango deja de permitir "día" y es el quiebre activo, cae a "mes"
+    watch(tipoDiaPermitido, (permitido) => {
+      if (!permitido && filtros.tipo === 'dia') filtros.tipo = 'mes'
+    })
+
+    async function cargarEmpresas() {
+      const res = await Auth.fetch(`${API}/catalogos/empresas`)
+      empresas.value = await res.json()
+    }
+
+    async function generar() {
+      cargando.value = true
+      yaGenero.value  = true
+      try {
+        const params = new URLSearchParams({
+          tipo:         filtros.tipo,
+          fecha_inicio: filtros.fechaInicio,
+          fecha_fin:    filtros.fechaFin,
+        })
+        if (filtros.empresaId) params.set('empresa_id', filtros.empresaId)
+
+        const res = await Auth.fetch(`${API}/reportes/ventas?${params}`)
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          alert(err.detail || 'Error al generar el reporte')
+          filas.value = []
+          return
+        }
+        filas.value = await res.json()
+      } finally {
+        cargando.value = false
+      }
+    }
+
+    // ── Agrupación visual por periodo ──────────────────────────
+    const gruposPorPeriodo = computed(() => {
+      const mapa = new Map()
+      for (const f of filas.value) {
+        if (!mapa.has(f.periodo)) mapa.set(f.periodo, [])
+        mapa.get(f.periodo).push(f)
+      }
+      return Array.from(mapa.entries()).map(([periodo, items]) => ({
+        periodo,
+        items,
+        totalCantidad: items.reduce((s, x) => s + x.suma_cantidad, 0),
+        totalVentas:   items.reduce((s, x) => s + parseFloat(x.suma_precio_venta), 0),
+        totalComision: items.reduce((s, x) => s + parseFloat(x.suma_comision), 0),
+      }))
+    })
+
+    const totalCantidad = computed(() => filas.value.reduce((s, x) => s + x.suma_cantidad, 0))
+    const totalVentas   = computed(() => filas.value.reduce((s, x) => s + parseFloat(x.suma_precio_venta), 0))
+    const totalComision = computed(() => filas.value.reduce((s, x) => s + parseFloat(x.suma_comision), 0))
+
+    // ── Exportar a Excel ────────────────────────────────────────
+    function exportarExcel() {
+      const datos = filas.value.map(f => ({
+        'Periodo':        f.periodo,
+        'Empresa':        f.empresa,
+        'Producto':       f.producto,
+        'Stock Actual':   f.stock,
+        'Precio Actual':  parseFloat(f.precio_venta),
+        'Suma Cantidad':  f.suma_cantidad,
+        'Suma Precio Venta': parseFloat(f.suma_precio_venta),
+        'Suma Comisión':  parseFloat(f.suma_comision),
+      }))
+      const ws = XLSX.utils.json_to_sheet(datos)
+      ws['!cols'] = [
+        { wch: 12 }, { wch: 20 }, { wch: 42 }, { wch: 12 },
+        { wch: 13 }, { wch: 13 }, { wch: 16 }, { wch: 14 },
+      ]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Reporte Ventas')
+      XLSX.writeFile(wb, `Reporte_Ventas_${filtros.tipo}_${filtros.fechaInicio}_${filtros.fechaFin}.xlsx`)
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────
+    function fmt(n) { return parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+
+    function fmtPeriodo(p) {
+      const d = new Date(p + 'T00:00:00')
+      if (filtros.tipo === 'anio') return d.getFullYear().toString()
+      if (filtros.tipo === 'mes')  return d.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' })
+      return d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    }
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador'])) return
+      await cargarEmpresas()
+    })
+
+    return {
+      empresas, filas, cargando, yaGenero, filtros, hoy,
+      diasRango, tipoDiaPermitido, gruposPorPeriodo,
+      totalCantidad, totalVentas, totalComision,
+      generar, exportarExcel, fmt, fmtPeriodo,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
