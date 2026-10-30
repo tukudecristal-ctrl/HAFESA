@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Publicidad — VERDE</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 640px; margin: 0 auto; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 1.5rem; }
+    .card h2 { font-size: 1.05rem; color: #2d3748; margin-bottom: 1.1rem; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin-bottom: .9rem; }
+    .field label { display: block; font-size: .78rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .03em; margin-bottom: .3rem; }
+    .field select, .field input, .field textarea {
+      width: 100%; padding: .5rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .9rem;
+    }
+    .field select:focus, .field input:focus, .field textarea:focus { outline: none; border-color: #4299e1; }
+    .field.full { margin-bottom: .9rem; }
+
+    .asesores-box {
+      border: 1.5px solid #cbd5e0; border-radius: 7px; padding: .6rem .8rem;
+      max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: .4rem;
+    }
+    .asesores-box label { display: flex; align-items: center; gap: .5rem; font-size: .88rem; color: #2d3748; font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .asesores-box input[type="checkbox"] { width: auto; flex: none; }
+
+    .resumen {
+      background: #ebf8ff; border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0;
+      font-size: .85rem; color: #2c5282;
+    }
+    .resumen .por-celda { font-weight: 800; font-size: 1rem; color: #2b6cb0; }
+    .resumen.invalido { background: #fff5f5; color: #c53030; }
+
+    .acciones { display: flex; justify-content: flex-end; gap: .75rem; }
+    .btn { padding: .5rem 1.1rem; border: none; border-radius: 7px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+
+    .msg-error { color: #e53e3e; font-size: .8rem; margin-top: .5rem; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+
+    @media (max-width: 640px) {
+      .container { padding: .75rem; }
+      .row { grid-template-columns: 1fr; gap: .7rem; }
+      .field select, .field input, .field textarea { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>📣 Publicidad</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>Registrar gasto de publicidad</h2>
+
+      <div class="row">
+        <div class="field">
+          <label>Medio</label>
+          <select v-model="form.medio">
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="youtube">Youtube</option>
+            <option value="whatsapp">Whatsapp</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Moneda</label>
+          <select v-model="form.moneda">
+            <option value="PEN">Soles</option>
+            <option value="USD">Dólares</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Fecha inicio</label>
+          <input type="date" v-model="form.fechaInicio" :max="form.fechaFinal || undefined" />
+        </div>
+        <div class="field">
+          <label>Fecha final</label>
+          <input type="date" v-model="form.fechaFinal" :min="form.fechaInicio || undefined" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field" v-if="form.moneda === 'USD'">
+          <label>Tipo de cambio</label>
+          <input type="number" step="0.001" min="0.001" v-model.number="form.tipoCambio" />
+        </div>
+        <div class="field" :style="form.moneda === 'PEN' ? 'grid-column: 1 / -1' : ''">
+          <label>Monto ({{ form.moneda === 'PEN' ? 'S/' : 'US$' }})</label>
+          <input type="number" step="0.01" min="0.01" v-model.number="form.monto" />
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>Asesores</label>
+        <div class="asesores-box">
+          <div v-if="!vendedores.length" style="font-size:.85rem;color:#a0aec0">Cargando asesores...</div>
+          <label v-for="v in vendedores" :key="v.id">
+            <input type="checkbox" :value="v.id" v-model="form.vendedorIds" />
+            {{ v.nombre_completo }}
+          </label>
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>Observaciones (opcional)</label>
+        <textarea v-model="form.observaciones" rows="2" placeholder="Campaña, link, referencia..."></textarea>
+      </div>
+
+      <div class="resumen" :class="{ invalido: !resumenValido }">
+        <div v-if="resumenValido">
+          {{ dias }} día(s) × {{ form.vendedorIds.length }} asesor(es) = {{ celdas }} registros de prorateo
+          <div style="margin-top:.3rem">Monto por día y asesor: <span class="por-celda">S/ {{ fmt(montoPorCelda) }}</span></div>
+        </div>
+        <div v-else>Completa fechas válidas, el monto y al menos un asesor para ver el prorateo.</div>
+      </div>
+
+      <p class="msg-error" v-if="error">{{ error }}</p>
+
+      <div class="acciones">
+        <button class="btn btn-secondary" @click="resetForm" :disabled="guardando">Limpiar</button>
+        <button class="btn btn-primary" @click="guardar" :disabled="!resumenValido || guardando">
+          {{ guardando ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" v-if="toast">{{ toast }}</div>
+</div>
+
+<script>
+const API = (location.port === '3000') ? 'http://localhost:8000/api' : '/api'
+const { createApp, ref, reactive, computed, onMounted } = Vue
+
+createApp({
+  setup() {
+    const vendedores = ref([])
+    const guardando  = ref(false)
+    const error      = ref('')
+    const toast      = ref('')
+
+    const hoy = new Date().toISOString().slice(0, 10)
+
+    function formInicial() {
+      return {
+        medio: 'facebook',
+        moneda: 'PEN',
+        fechaInicio: hoy,
+        fechaFinal: hoy,
+        tipoCambio: 3.80,
+        monto: null,
+        vendedorIds: [],
+        observaciones: '',
+      }
+    }
+    const form = reactive(formInicial())
+
+    const dias = computed(() => {
+      if (!form.fechaInicio || !form.fechaFinal) return 0
+      const ms = new Date(form.fechaFinal) - new Date(form.fechaInicio)
+      if (ms < 0) return 0
+      return Math.round(ms / 86400000) + 1
+    })
+    const celdas = computed(() => dias.value * form.vendedorIds.length)
+    const montoSoles = computed(() => {
+      const monto = parseFloat(form.monto) || 0
+      const tc = form.moneda === 'USD' ? (parseFloat(form.tipoCambio) || 0) : 1
+      return monto * tc
+    })
+    const resumenValido = computed(() =>
+      dias.value > 0 && form.vendedorIds.length > 0 && parseFloat(form.monto) > 0 &&
+      (form.moneda === 'PEN' || parseFloat(form.tipoCambio) > 0)
+    )
+    const montoPorCelda = computed(() => celdas.value > 0 ? montoSoles.value / celdas.value : 0)
+
+    async function cargarVendedores() {
+      const res = await Auth.fetch(`${API}/catalogos/vendedores`)
+      vendedores.value = await res.json()
+    }
+
+    function resetForm() {
+      Object.assign(form, formInicial())
+      error.value = ''
+    }
+
+    async function guardar() {
+      if (!resumenValido.value) return
+      guardando.value = true
+      error.value = ''
+      try {
+        const res = await Auth.fetch(`${API}/publicidad/`, {
+          method: 'POST',
+          body: JSON.stringify({
+            medio:         form.medio,
+            fecha_inicio:  form.fechaInicio,
+            fecha_final:   form.fechaFinal,
+            moneda:        form.moneda,
+            monto:         form.monto,
+            tipo_cambio:   form.moneda === 'USD' ? form.tipoCambio : 1,
+            vendedor_ids:  form.vendedorIds,
+            observaciones: form.observaciones || null,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          error.value = data.detail || 'Error al guardar'
+          return
+        }
+        mostrarToast(`✅ Publicidad registrada — ${data.detalles.length} registros de prorateo`)
+        resetForm()
+      } catch {
+        error.value = 'Error de conexión'
+      } finally {
+        guardando.value = false
+      }
+    }
+
+    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3500) }
+    function fmt(n) { return parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador'])) return
+      await cargarVendedores()
+    })
+
+    return {
+      vendedores, form, guardando, error, toast,
+      dias, celdas, resumenValido, montoPorCelda,
+      guardar, resetForm, fmt,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

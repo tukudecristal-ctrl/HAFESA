@@ -246,6 +246,38 @@ class Usuario(Base):
     vendedor = relationship("Vendedor")
 
 
+class Publicidad(Base):
+    __tablename__ = "publicidad"
+
+    id = Column(Integer, primary_key=True)
+    medio = Column(String(20), nullable=False)  # facebook | instagram | youtube | whatsapp
+    fecha_inicio = Column(Date, nullable=False)
+    fecha_final = Column(Date, nullable=False)
+    moneda = Column(String(3), nullable=False)  # PEN | USD
+    monto = Column(Numeric(10, 2), nullable=False)
+    tipo_cambio = Column(Numeric(6, 3), nullable=False, default=1.000)
+    monto_soles = Column(Numeric(10, 2), nullable=False)
+    observaciones = Column(Text)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    created_at = Column(DateTime, server_default=func.now())
+
+    detalles = relationship("PublicidadDetalle", back_populates="publicidad", cascade="all, delete-orphan")
+
+
+class PublicidadDetalle(Base):
+    __tablename__ = "publicidad_detalle"
+
+    id = Column(Integer, primary_key=True)
+    publicidad_id = Column(Integer, ForeignKey("publicidad.id", ondelete="CASCADE"))
+    vendedor_id = Column(Integer, ForeignKey("vendedores.id"))
+    empresa_id = Column(Integer, ForeignKey("empresas.id"))
+    fecha = Column(Date, nullable=False)
+    monto_prorateado = Column(Numeric(10, 2), nullable=False)
+
+    publicidad = relationship("Publicidad", back_populates="detalles")
+    vendedor = relationship("Vendedor")
+
+
 class FlujoLog(Base):
     __tablename__ = "flujo_log"
 

@@ -344,6 +344,7 @@
       <a href="compras.html"           @click="navOpen = false">Compras</a>
       <a v-if="currentUser?.rol === 'administrador'" href="comisiones.html"       @click="navOpen = false">💰 Comisiones</a>
       <a v-if="currentUser?.rol === 'administrador'" href="reporte_ventas.html"   @click="navOpen = false">📊 Reporte de Ventas</a>
+      <a v-if="currentUser?.rol === 'administrador'" href="publicidad.html"       @click="navOpen = false">📣 Publicidad</a>
       <a v-if="currentUser?.rol === 'administrador'" href="crud_proveedores.html" @click="navOpen = false">Proveedores</a>
       <a v-if="currentUser?.rol === 'administrador'" href="crud_empresas.html"    @click="navOpen = false">Empresas</a>
       <a v-if="currentUser?.rol === 'administrador'" href="crud_usuarios.html"    @click="navOpen = false">Usuarios</a>

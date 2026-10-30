@@ -507,6 +507,65 @@ class ClienteLookup(BaseModel):
     telefono: Optional[str] = None
 
 
+# ── Publicidad ────────────────────────────────────────────────────
+class PublicidadCreate(BaseModel):
+    medio: Literal["facebook", "instagram", "youtube", "whatsapp"]
+    fecha_inicio: date
+    fecha_final: date
+    moneda: Literal["PEN", "USD"]
+    monto: Decimal
+    tipo_cambio: Decimal = Decimal("1.000")
+    vendedor_ids: list[int]
+    observaciones: Optional[str] = None
+
+    @field_validator("monto")
+    @classmethod
+    def validar_monto(cls, v: Decimal) -> Decimal:
+        if v <= 0:
+            raise ValueError("El monto debe ser mayor a 0")
+        return v
+
+    @field_validator("vendedor_ids")
+    @classmethod
+    def validar_vendedores(cls, v: list[int]) -> list[int]:
+        if not v:
+            raise ValueError("Debe seleccionar al menos un asesor")
+        return v
+
+    @model_validator(mode="after")
+    def validar_fechas(self):
+        if self.fecha_final < self.fecha_inicio:
+            raise ValueError("fecha_final no puede ser menor que fecha_inicio")
+        if self.moneda == "USD" and self.tipo_cambio <= 0:
+            raise ValueError("El tipo de cambio debe ser mayor a 0")
+        return self
+
+
+class PublicidadDetalleOut(BaseModel):
+    vendedor_id: int
+    nombre_vendedor: str
+    fecha: date
+    monto_prorateado: Decimal
+
+    model_config = {"from_attributes": True}
+
+
+class PublicidadOut(BaseModel):
+    id: int
+    medio: str
+    fecha_inicio: date
+    fecha_final: date
+    moneda: str
+    monto: Decimal
+    tipo_cambio: Decimal
+    monto_soles: Decimal
+    observaciones: Optional[str]
+    created_at: Optional[datetime]
+    detalles: list[PublicidadDetalleOut] = []
+
+    model_config = {"from_attributes": True}
+
+
 # ── Reporte de ventas ────────────────────────────────────────────
 class ReporteVentaItem(BaseModel):
     periodo: date

@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 import os
 
-from routers import catalogos, pedidos, compras, comisiones, auth, mis_ventas, agencias, clientes, reportes
+from routers import catalogos, pedidos, compras, comisiones, auth, mis_ventas, agencias, clientes, reportes, publicidad
 
 load_dotenv()
 
@@ -31,6 +31,7 @@ app.include_router(pedidos.router,     prefix="/api/pedidos",     tags=["Pedidos
 app.include_router(compras.router,     prefix="/api/compras",     tags=["Compras"])
 app.include_router(comisiones.router,  prefix="/api/comisiones",  tags=["Comisiones"])
 app.include_router(reportes.router,    prefix="/api/reportes",    tags=["Reportes"])
+app.include_router(publicidad.router,  prefix="/api/publicidad",  tags=["Publicidad"])
 
 # Servir imágenes de productos
 IMAGENES_DIR = os.path.join(os.path.dirname(__file__), "static", "imagenes")
