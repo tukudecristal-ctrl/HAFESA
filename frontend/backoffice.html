@@ -29,6 +29,21 @@
     }
     header nav a:hover { color: #fff; }
 
+    .nav-dropdown { position: relative; display: inline-block; margin-left: 1.2rem; }
+    .nav-dropdown-trigger { color: #bee3f8; font-size: .9rem; cursor: pointer; user-select: none; }
+    .nav-dropdown-trigger:hover { color: #fff; }
+    .nav-dropdown .caret { font-size: .7em; }
+    .nav-dropdown-panel {
+      display: none;
+      position: absolute; top: calc(100% + .6rem); left: 0;
+      background: #fff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.18);
+      padding: .4rem; min-width: 180px; z-index: 50;
+    }
+    .nav-dropdown.open .nav-dropdown-panel { display: block; }
+    .nav-dropdown-label { font-size: .7rem; color: #a0aec0; text-transform: uppercase; letter-spacing: .04em; padding: .3rem .6rem; }
+    .nav-dropdown-panel a { display: block; color: #2d3748 !important; margin-left: 0 !important; padding: .5rem .6rem; border-radius: 6px; font-size: .88rem; }
+    .nav-dropdown-panel a:hover { background: #ebf8ff; color: #2b6cb0 !important; }
+
     .container { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
 
     /* Filtros */
@@ -228,6 +243,15 @@
       header nav a:last-child { border-bottom: none; }
       .nav-salir-mobile { display: block !important; color: #fbb6b6 !important; }
 
+      .nav-dropdown { margin-left: 0; width: 100%; padding: .4rem 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+      .nav-dropdown-trigger { display: none; }
+      .nav-dropdown-panel {
+        display: block; position: static; background: transparent; box-shadow: none; padding: 0; min-width: 0;
+      }
+      .nav-dropdown-label { color: rgba(255,255,255,.55); padding: .2rem 0; }
+      .nav-dropdown-panel a { color: #bee3f8 !important; padding: .5rem 0; border-radius: 0; border-bottom: none !important; }
+      .nav-dropdown-panel a:hover { background: transparent; color: #fff !important; }
+
       /* Container */
       .container { padding: .75rem; }
 
@@ -342,12 +366,27 @@
     <nav :class="{ 'nav-open': navOpen }">
       <a href="formulario_pedido.html" @click="navOpen = false">+ Nuevo Pedido</a>
       <a href="compras.html"           @click="navOpen = false">Compras</a>
-      <a v-if="currentUser?.rol === 'administrador'" href="comisiones.html"       @click="navOpen = false">💰 Comisiones</a>
-      <a v-if="currentUser?.rol === 'administrador'" href="reporte_ventas.html"   @click="navOpen = false">📊 Reporte de Ventas</a>
-      <a v-if="currentUser?.rol === 'administrador'" href="publicidad.html"       @click="navOpen = false">📣 Publicidad</a>
-      <a v-if="currentUser?.rol === 'administrador'" href="crud_proveedores.html" @click="navOpen = false">Proveedores</a>
-      <a v-if="currentUser?.rol === 'administrador'" href="crud_empresas.html"    @click="navOpen = false">Empresas</a>
-      <a v-if="currentUser?.rol === 'administrador'" href="crud_usuarios.html"    @click="navOpen = false">Usuarios</a>
+
+      <div class="nav-dropdown" v-if="currentUser?.rol === 'administrador'" :class="{ open: menuAbierto === 'reportes' }">
+        <span class="nav-dropdown-trigger" @click="toggleMenu('reportes')">Reportes <span class="caret">▾</span></span>
+        <div class="nav-dropdown-panel">
+          <div class="nav-dropdown-label">Reportes</div>
+          <a href="comisiones.html"     @click="cerrarMenus">💰 Comisiones</a>
+          <a href="reporte_ventas.html" @click="cerrarMenus">📊 Reporte de Ventas</a>
+        </div>
+      </div>
+
+      <div class="nav-dropdown" v-if="currentUser?.rol === 'administrador'" :class="{ open: menuAbierto === 'admin' }">
+        <span class="nav-dropdown-trigger" @click="toggleMenu('admin')">Administración <span class="caret">▾</span></span>
+        <div class="nav-dropdown-panel">
+          <div class="nav-dropdown-label">Administración</div>
+          <a href="publicidad.html"       @click="cerrarMenus">📣 Publicidad</a>
+          <a href="crud_proveedores.html" @click="cerrarMenus">Proveedores</a>
+          <a href="crud_empresas.html"    @click="cerrarMenus">Empresas</a>
+          <a href="crud_usuarios.html"    @click="cerrarMenus">Usuarios</a>
+        </div>
+      </div>
+
       <a href="cambiar_clave.html"       @click="navOpen = false">🔑 Cambiar clave</a>
       <a href="#" class="nav-salir-mobile" @click.prevent="logout">Salir</a>
     </nav>
@@ -487,6 +526,9 @@ createApp({
     const cancelando = ref(null)
     const toast      = ref('')
     const navOpen    = ref(false)
+    const menuAbierto = ref(null)
+    function toggleMenu(nombre) { menuAbierto.value = menuAbierto.value === nombre ? null : nombre }
+    function cerrarMenus() { menuAbierto.value = null; navOpen.value = false }
     const estados  = ['REGISTRADO', 'EMPACADO', 'ROTULO_IMPRESO', 'DEPOSITADO', 'ENTREGADO', 'CANCELADO']
 
     const iconosEstado = {
@@ -689,17 +731,22 @@ createApp({
     const currentUser = ref(null)
     function logout() { Auth.logout() }
 
+    function alClickFuera(e) {
+      if (menuAbierto.value && !e.target.closest('.nav-dropdown')) menuAbierto.value = null
+    }
+
     onMounted(() => {
       currentUser.value = Auth.require(['administrador', 'logistica'])
       if (!currentUser.value) return
       cargarEmpresas()
       cargarCatalogos()
       cargarPedidos()
+      document.addEventListener('click', alClickFuera)
     })
 
     return {
       empresas, pedidos, filtros, estados, iconosEstado, cargando, avanzando, cancelando, toast, conteoEstados,
-      vendedoresMap, productosMap, currentUser, navOpen,
+      vendedoresMap, productosMap, currentUser, navOpen, menuAbierto, toggleMenu, cerrarMenus,
       cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, exportarRotulosExcel, fmtFecha, fmt, logout, estadoLabel,
     }
   }
