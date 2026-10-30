@@ -509,7 +509,7 @@ class ClienteLookup(BaseModel):
 
 # ── Publicidad ────────────────────────────────────────────────────
 class PublicidadCreate(BaseModel):
-    medio: Literal["facebook", "instagram", "youtube", "whatsapp"]
+    medio: Literal["facebook", "instagram", "youtube", "whatsapp", "meta_ads"]
     fecha_inicio: date
     fecha_final: date
     moneda: Literal["PEN", "USD"]
