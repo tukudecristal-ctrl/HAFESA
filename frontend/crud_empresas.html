@@ -240,7 +240,7 @@ createApp({
 
     function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
 
-    onMounted(() => { if (Auth.require(['administrador'])) cargar() })
+    onMounted(() => { if (Auth.requirePantalla('empresas')) cargar() })
 
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 

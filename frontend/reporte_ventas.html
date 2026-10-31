@@ -300,7 +300,7 @@ createApp({
     }
 
     onMounted(async () => {
-      if (!Auth.require(['administrador'])) return
+      if (!Auth.requirePantalla('reporte_ventas')) return
       await cargarEmpresas()
     })
 

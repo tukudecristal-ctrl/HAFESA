@@ -246,6 +246,13 @@ class Usuario(Base):
     vendedor = relationship("Vendedor")
 
 
+class RolPermiso(Base):
+    __tablename__ = "rol_permisos"
+
+    rol = Column(String(20), primary_key=True)
+    pantalla = Column(String(40), primary_key=True)
+
+
 class Publicidad(Base):
     __tablename__ = "publicidad"
 

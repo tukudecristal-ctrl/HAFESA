@@ -5,7 +5,7 @@ from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from database import get_db
-from dependencies import require_roles, get_current_user
+from dependencies import require_pantalla
 import models, schemas
 
 router = APIRouter()
@@ -19,7 +19,7 @@ def _redondear(v: Decimal) -> Decimal:
 def crear_publicidad(
     data: schemas.PublicidadCreate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_roles("administrador")),
+    user: dict = Depends(require_pantalla("publicidad")),
 ):
     vendedores = (
         db.query(models.Vendedor)

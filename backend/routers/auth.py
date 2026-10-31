@@ -6,6 +6,7 @@ import jwt, os, bcrypt
 from database import get_db
 from dependencies import get_current_user, require_roles
 import models, schemas
+from catalogo_pantallas import pantallas_de_usuario, detalle_pantallas
 
 router = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY", "cambia-esta-clave-en-produccion")
@@ -47,6 +48,7 @@ def login(data: schemas.LoginInput, db: Session = Depends(get_db)):
         rol=usuario.rol,
         nombre=usuario.nombre,
         vendedor_id=usuario.vendedor_id,
+        pantallas=detalle_pantallas(pantallas_de_usuario(db, usuario)),
     )
 
 

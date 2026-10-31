@@ -277,7 +277,7 @@ createApp({
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
     onMounted(async () => {
-      if (!Auth.require(['administrador', 'logistica'])) return
+      if (!Auth.requirePantalla('compras')) return
       const [empRes, provRes] = await Promise.all([
         Auth.fetch(`${API}/catalogos/empresas`),
         Auth.fetch(`${API}/catalogos/proveedores`),

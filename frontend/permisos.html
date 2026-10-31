@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Permisos — VERDE</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 1000px; margin: 0 auto; }
+    .intro { font-size: .85rem; color: #4a5568; margin-bottom: 1rem; line-height: 1.5; }
+
+    .layout { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; align-items: start; }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+
+    .lista-usuarios { overflow: hidden; }
+    .usuarios { max-height: 560px; overflow-y: auto; }
+    .sub .inactivo { text-decoration: line-through; color: #a0aec0; }
+    .usuario { display: flex; flex-direction: column; gap: .2rem; padding: .7rem .9rem; cursor: pointer; border-bottom: 1px solid #edf2f7; border-left: 3px solid transparent; }
+    .usuario:hover { background: #f7fafc; }
+    .usuario.activo-sel { background: #ebf8ff; border-left-color: #3182ce; }
+    .usuario .nombre { font-weight: 700; font-size: .9rem; color: #2d3748; text-transform: capitalize; }
+    .usuario .meta { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; font-size: .74rem; color: #718096; }
+
+    .rol-badge { padding: .12rem .5rem; border-radius: 20px; font-size: .7rem; font-weight: 700; }
+    .rol-administrador { background: #faf089; color: #744210; }
+    .rol-vendedor      { background: #c6f6d5; color: #22543d; }
+    .rol-logistica     { background: #bee3f8; color: #2c5282; }
+
+    .detalle { padding: 1.25rem 1.5rem; }
+    .detalle-cab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem; align-items: flex-start; margin-bottom: 1rem; }
+    .detalle-cab h2 { font-size: 1.1rem; color: #2d3748; text-transform: capitalize; }
+    .detalle-cab .sub { font-size: .8rem; color: #718096; margin-top: .2rem; }
+    .estado-box { font-size: .82rem; padding: .55rem .8rem; border-radius: 8px; margin-bottom: 1rem; line-height: 1.45; }
+    .estado-box.admin { background: #fffff0; color: #744210; }
+
+    .grupo { margin-bottom: 1.1rem; }
+    .grupo h3 { font-size: .74rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .45rem; }
+    .pantallas { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .45rem; }
+    .pantalla { display: flex; align-items: center; gap: .55rem; padding: .55rem .7rem; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: .88rem; color: #2d3748; user-select: none; }
+    .pantalla:hover { border-color: #90cdf4; }
+    .pantalla.marcada { border-color: #3182ce; background: #ebf8ff; }
+    .pantalla.bloqueada { cursor: not-allowed; opacity: .7; }
+    .pantalla input { width: 17px; height: 17px; flex: none; accent-color: #3182ce; }
+    .pantalla .defecto { margin-left: auto; font-size: .64rem; color: #a0aec0; text-transform: uppercase; letter-spacing: .03em; }
+
+    .acciones { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
+    .acciones .espacio { flex: 1; }
+    .btn { padding: .5rem 1.1rem; border: none; border-radius: 7px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #3182ce; color: #fff; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn-link { background: none; color: #3182ce; padding: .3rem .4rem; font-weight: 600; }
+    .btn-link:hover { text-decoration: underline; }
+
+    .vacio { text-align: center; color: #a0aec0; padding: 3rem 1rem; font-size: .92rem; }
+    .msg-error { color: #e53e3e; font-size: .85rem; margin-bottom: .75rem; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+
+    @media (max-width: 760px) {
+      .container { padding: .75rem; }
+      .layout { grid-template-columns: 1fr; }
+      .usuarios { max-height: 240px; }
+      .detalle { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>🔐 Permisos</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+    <p class="intro">
+      Elige un rol y marca las pantallas a las que puede entrar. El cambio vale para <b>todos los usuarios de ese rol</b> y se
+      aplica la siguiente vez que abren una pantalla, sin que tengan que volver a ingresar.
+    </p>
+
+    <p class="msg-error" v-if="errorCarga">{{ errorCarga }}</p>
+
+    <div class="layout">
+      <div class="card lista-usuarios">
+        <div class="usuarios">
+          <div v-for="r in roles" :key="r.rol" class="usuario" :class="{ 'activo-sel': sel && sel.rol === r.rol }" @click="seleccionar(r)">
+            <span class="nombre">{{ r.rol }}</span>
+            <span class="meta">
+              <span class="rol-badge" :class="`rol-${r.rol}`">{{ r.usuarios.length }} {{ r.usuarios.length === 1 ? 'usuario' : 'usuarios' }}</span>
+              <span>{{ r.pantallas.length }} de {{ catalogo.length }} pantallas</span>
+            </span>
+          </div>
+          <div class="vacio" v-if="!roles.length">{{ cargando ? 'Cargando...' : 'Sin roles' }}</div>
+        </div>
+      </div>
+
+      <div class="card detalle" v-if="sel">
+        <div class="detalle-cab">
+          <div>
+            <h2>Rol {{ sel.rol }}</h2>
+            <div class="sub">
+              <template v-if="sel.usuarios.length">
+                Usuarios: <span v-for="(u, i) in sel.usuarios" :key="u.dni" :class="{ inactivo: !u.activo }">{{ u.nombre }}<template v-if="!u.activo"> (inactivo)</template><template v-if="i < sel.usuarios.length - 1">, </template></span>
+              </template>
+              <template v-else>Sin usuarios con este rol</template>
+            </div>
+          </div>
+          <div v-if="sel.editable">
+            <button class="btn btn-link" @click="marcarTodo(true)">Marcar todo</button>
+            <button class="btn btn-link" @click="marcarTodo(false)">Quitar todo</button>
+          </div>
+        </div>
+
+        <div class="estado-box admin" v-if="!sel.editable">
+          El administrador siempre tiene acceso a todas las pantallas; no se puede restringir.
+        </div>
+
+        <div class="grupo" v-for="g in grupos" :key="g.nombre">
+          <h3>{{ g.nombre }}</h3>
+          <div class="pantallas">
+            <label v-for="p in g.pantallas" :key="p.key" class="pantalla"
+                   :class="{ marcada: marcadas.has(p.key), bloqueada: !sel.editable }">
+              <input type="checkbox" :checked="marcadas.has(p.key)" :disabled="!sel.editable" @change="alternar(p.key)" />
+              {{ p.nombre }}
+            </label>
+          </div>
+        </div>
+
+        <p class="msg-error" v-if="error">{{ error }}</p>
+
+        <div class="acciones" v-if="sel.editable">
+          <span class="espacio"></span>
+          <button class="btn btn-secondary" @click="descartar" :disabled="!hayCambios || guardando">Descartar</button>
+          <button class="btn btn-primary" @click="guardar" :disabled="!hayCambios || guardando">
+            {{ guardando ? 'Guardando...' : 'Guardar permisos' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="card vacio" v-else>Selecciona un rol de la lista para ver y editar sus permisos.</div>
+    </div>
+  </div>
+
+  <div class="toast" v-if="toast">{{ toast }}</div>
+</div>
+
+<script>
+const API = (location.port === '3000') ? 'http://localhost:8000/api' : '/api'
+const { createApp, ref, computed, onMounted, nextTick } = Vue
+
+createApp({
+  setup() {
+    const roles     = ref([])
+    const catalogo  = ref([])
+    const sel       = ref(null)
+    const marcadas  = ref(new Set())
+    const cargando  = ref(true)
+    const guardando = ref(false)
+    const error     = ref('')
+    const errorCarga = ref('')
+    const toast     = ref('')
+
+    const grupos = computed(() => {
+      const porGrupo = []
+      for (const p of catalogo.value) {
+        let g = porGrupo.find(x => x.nombre === p.grupo)
+        if (!g) { g = { nombre: p.grupo, pantallas: [] }; porGrupo.push(g) }
+        g.pantallas.push(p)
+      }
+      return porGrupo
+    })
+
+    const hayCambios = computed(() => {
+      if (!sel.value || !sel.value.editable) return false
+      const actuales = new Set(sel.value.pantallas)
+      if (actuales.size !== marcadas.value.size) return true
+      return [...marcadas.value].some(k => !actuales.has(k))
+    })
+
+    function cargarMarcas() { marcadas.value = new Set(sel.value ? sel.value.pantallas : []) }
+
+    function seleccionar(r) {
+      if (sel.value && sel.value.rol !== r.rol && hayCambios.value &&
+          !confirm('Tienes cambios sin guardar. ¿Descartarlos y cambiar de rol?')) return
+      sel.value = r
+      error.value = ''
+      cargarMarcas()
+      if (window.innerWidth <= 760) {
+        nextTick(() => document.querySelector('.detalle')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      }
+    }
+
+    function alternar(clave) {
+      const nuevo = new Set(marcadas.value)
+      nuevo.has(clave) ? nuevo.delete(clave) : nuevo.add(clave)
+      marcadas.value = nuevo
+    }
+    function marcarTodo(si) { marcadas.value = new Set(si ? catalogo.value.map(p => p.key) : []) }
+    function descartar() { cargarMarcas(); error.value = '' }
+
+    async function guardar() {
+      const r = sel.value
+      const afectados = r.usuarios.length
+      if (marcadas.value.size === 0 &&
+          !confirm(`El rol ${r.rol} quedará sin acceso a ninguna pantalla: ${afectados} usuario(s) no podrán usar el sistema. ¿Guardar de todos modos?`)) return
+      guardando.value = true
+      error.value = ''
+      try {
+        const res = await Auth.fetch(`${API}/permisos/roles/${r.rol}`, {
+          method: 'PUT',
+          body: JSON.stringify({ pantallas: [...marcadas.value] }),
+        })
+        if (!res) return
+        const data = await res.json()
+        if (!res.ok) { error.value = data.detail || 'No se pudo guardar'; return }
+        const i = roles.value.findIndex(x => x.rol === data.rol)
+        if (i >= 0) roles.value[i] = data
+        sel.value = data
+        cargarMarcas()
+        mostrarToast(`✅ Permisos del rol ${data.rol} guardados`)
+      } catch {
+        error.value = 'Error de conexión'
+      } finally {
+        guardando.value = false
+      }
+    }
+
+    async function cargar() {
+      try {
+        const [rc, rr] = await Promise.all([
+          Auth.fetch(`${API}/permisos/catalogo`),
+          Auth.fetch(`${API}/permisos/roles`),
+        ])
+        if (!rc || !rr) return
+        if (!rc.ok || !rr.ok) { errorCarga.value = 'No se pudieron cargar los permisos'; return }
+        catalogo.value = await rc.json()
+        roles.value = await rr.json()
+      } catch {
+        errorCarga.value = 'Error de conexión'
+      } finally {
+        cargando.value = false
+      }
+    }
+
+    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
+
+    onMounted(() => {
+      if (!Auth.require(['administrador'])) return
+      cargar()
+    })
+
+    return {
+      roles, catalogo, grupos, sel, marcadas, cargando, guardando, error, errorCarga, toast,
+      hayCambios, seleccionar, alternar, marcarTodo, descartar, guardar,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

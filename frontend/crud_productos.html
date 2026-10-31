@@ -377,7 +377,7 @@ createApp({
     function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
 
     onMounted(async () => {
-      if (!Auth.require(['administrador', 'logistica'])) return
+      if (!Auth.requirePantalla('productos')) return
       const res = await Auth.fetch(`${API}/catalogos/empresas`)
       empresas.value = await res.json()
       empresas.value.forEach(e => empresasMap.value[e.id] = e.nombre)

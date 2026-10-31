@@ -227,7 +227,7 @@ createApp({
 
     function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3000) }
 
-    onMounted(() => { if (Auth.require(['administrador'])) cargar() })
+    onMounted(() => { if (Auth.requirePantalla('proveedores')) cargar() })
 
     return {
       proveedores, proveedoresFiltrados, busqueda, mostrarInactivos, modal, toast,

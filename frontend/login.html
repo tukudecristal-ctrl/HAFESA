@@ -188,9 +188,10 @@ createApp({
     onMounted(() => {
       const user = Auth.getUser()
       const token = Auth.getToken()
-      if (token && user) {
-        if (user.rol === 'vendedor') location.href = 'formulario_pedido.html'
-        else location.href = 'backoffice.html'
+      // Una sesión anterior a los permisos por pantalla no trae la lista: se pide ingresar de nuevo
+      if (token && user && Array.isArray(user.pantallas)) {
+        const destino = Auth.inicio(user)
+        if (destino) location.href = destino
       }
     })
 
@@ -210,10 +211,11 @@ createApp({
         const data = await res.json()
         if (!res.ok) { error.value = data.detail || 'Error al ingresar'; return }
 
-        Auth.save(data)
+        const destino = Auth.inicio(data)
+        if (!destino) { error.value = 'Tu usuario no tiene pantallas asignadas. Consulta con el administrador.'; return }
 
-        if (data.rol === 'vendedor')       location.href = 'formulario_pedido.html'
-        else                               location.href = 'backoffice.html'
+        Auth.save(data)
+        location.href = destino
       } catch {
         error.value = 'Error de conexión con el servidor'
       } finally {

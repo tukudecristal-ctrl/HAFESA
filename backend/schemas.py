@@ -16,6 +16,7 @@ class TokenOut(BaseModel):
     rol: str
     nombre: str
     vendedor_id: Optional[int]
+    pantallas: list[dict] = []
 
 class UsuarioCreate(BaseModel):
     dni: str
@@ -598,3 +599,21 @@ class EstadoFinancieroOut(BaseModel):
     empresa_id: Optional[int]
     meses: list[EstadoFinancieroPeriodo]
     total: EstadoFinancieroPeriodo
+
+
+# ── Permisos por pantalla ────────────────────────────────────────
+class PermisosRolUsuario(BaseModel):
+    nombre: str
+    dni: str
+    activo: bool
+
+
+class PermisosRolOut(BaseModel):
+    rol: str
+    editable: bool
+    pantallas: list[str]
+    usuarios: list[PermisosRolUsuario]
+
+
+class PermisosRolInput(BaseModel):
+    pantallas: list[str]

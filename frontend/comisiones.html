@@ -543,7 +543,7 @@ createApp({
     }
 
     onMounted(async () => {
-      if (!Auth.require(['administrador', 'logistica'])) return
+      if (!Auth.requirePantalla('comisiones')) return
       const res = await Auth.fetch(`${API}/catalogos/empresas`)
       empresas.value = await res.json()
       await cargarResumen()

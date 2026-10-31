@@ -695,7 +695,7 @@ createApp({
 
     // ── Catálogos iniciales ────────────────────────────────────
     async function cargarEmpresasYAgencias() {
-      const user = Auth.require()
+      const user = Auth.requirePantalla('nuevo_pedido')
       if (!user) return
       currentUser.value = user
 

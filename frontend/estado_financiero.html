@@ -243,7 +243,7 @@ createApp({
     watch(filtros, cargar)
 
     onMounted(async () => {
-      if (!Auth.require(['administrador'])) return
+      if (!Auth.requirePantalla('estado_financiero')) return
       await Promise.all([cargarEmpresas(), cargar()])
     })
 

@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal
 
 from database import get_db
-from dependencies import require_roles
+from dependencies import require_pantalla
 import schemas
 
 router = APIRouter()
@@ -22,7 +22,7 @@ def reporte_ventas(
     fecha_fin: date = Query(default_factory=date.today),
     empresa_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    _: dict = Depends(require_roles("administrador")),
+    _: dict = Depends(require_pantalla("reporte_ventas")),
 ):
     if fecha_fin < fecha_inicio:
         raise HTTPException(status_code=400, detail="fecha_fin no puede ser menor que fecha_inicio")
@@ -84,7 +84,7 @@ def estado_financiero(
     mes: Optional[int] = Query(None, ge=1, le=12),
     empresa_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    _: dict = Depends(require_roles("administrador")),
+    _: dict = Depends(require_pantalla("estado_financiero")),
 ):
     inicio = date(anio, mes or 1, 1)
     if mes:
