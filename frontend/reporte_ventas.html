@@ -21,6 +21,7 @@
     .toolbar { display: flex; gap: .75rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap; background: #fff; padding: 1rem; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
     .field { display: flex; flex-direction: column; gap: .3rem; }
     .field label { font-size: .75rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .03em; }
+    .par { display: flex; gap: .4rem; }
     .field select, .field input { padding: .45rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .88rem; }
     .tipo-group { display: flex; gap: .4rem; }
     .tipo-btn { padding: .45rem .9rem; border: 1.5px solid #cbd5e0; border-radius: 7px; background: #fff; font-size: .85rem; font-weight: 600; color: #4a5568; cursor: pointer; }
@@ -62,6 +63,7 @@
       .tipo-group { width: 100%; }
       .tipo-btn { flex: 1; }
       .field select, .field input { font-size: 16px; }
+      .par { flex-wrap: wrap; }
       .card { overflow-x: auto; }
     }
   </style>
@@ -92,36 +94,61 @@
       <div class="field">
         <label>Quiebre</label>
         <div class="tipo-group">
-          <button class="tipo-btn" :class="{activo: filtros.tipo === 'dia'}"
-                  :disabled="!tipoDiaPermitido" :title="!tipoDiaPermitido ? 'Solo disponible para rangos de hasta 60 días' : ''"
-                  @click="filtros.tipo = 'dia'">Día</button>
+          <button class="tipo-btn" :class="{activo: filtros.tipo === 'dia'}" @click="filtros.tipo = 'dia'">Día</button>
           <button class="tipo-btn" :class="{activo: filtros.tipo === 'mes'}" @click="filtros.tipo = 'mes'">Mes</button>
           <button class="tipo-btn" :class="{activo: filtros.tipo === 'anio'}" @click="filtros.tipo = 'anio'">Año</button>
         </div>
       </div>
 
-      <div class="field">
-        <label>Fecha inicio</label>
-        <input type="date" v-model="filtros.fechaInicio" :max="filtros.fechaFin" />
-      </div>
+      <template v-if="filtros.tipo === 'dia'">
+        <div class="field">
+          <label>Fecha inicio</label>
+          <input type="date" v-model="filtros.fechaInicio" :max="filtros.fechaFin" />
+        </div>
+        <div class="field">
+          <label>Fecha fin</label>
+          <input type="date" v-model="filtros.fechaFin" :max="hoy" />
+        </div>
+      </template>
 
-      <div class="field">
-        <label>Fecha fin</label>
-        <input type="date" v-model="filtros.fechaFin" :max="hoy" />
-      </div>
+      <template v-else-if="filtros.tipo === 'mes'">
+        <div class="field">
+          <label>Mes y año de inicio</label>
+          <div class="par">
+            <select v-model.number="filtros.mesIni"><option v-for="(n, i) in MESES" :key="i" :value="i + 1">{{ n }}</option></select>
+            <select v-model.number="filtros.anioIni"><option v-for="a in ANIOS" :key="a" :value="a">{{ a }}</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Mes y año de fin</label>
+          <div class="par">
+            <select v-model.number="filtros.mesFin"><option v-for="(n, i) in MESES" :key="i" :value="i + 1">{{ n }}</option></select>
+            <select v-model.number="filtros.anioFin"><option v-for="a in ANIOS" :key="a" :value="a">{{ a }}</option></select>
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="field">
+          <label>Año de inicio</label>
+          <select v-model.number="filtros.anioDesde"><option v-for="a in ANIOS" :key="a" :value="a">{{ a }}</option></select>
+        </div>
+        <div class="field">
+          <label>Año de fin</label>
+          <select v-model.number="filtros.anioHasta"><option v-for="a in ANIOS" :key="a" :value="a">{{ a }}</option></select>
+        </div>
+      </template>
 
       <div class="spacer"></div>
 
-      <button class="btn btn-primary" @click="generar" :disabled="cargando || !filtros.fechaInicio">
+      <button class="btn btn-primary" @click="generar" :disabled="cargando || !!avisoRango">
         {{ cargando ? 'Generando...' : '🔍 Generar' }}
       </button>
       <button class="btn btn-success" @click="exportarExcel" :disabled="!filas.length">
         📥 Exportar Excel
       </button>
     </div>
-    <p class="aviso-dia" v-if="!tipoDiaPermitido && filtros.tipo !== 'dia'">
-      El quiebre por día se habilita solo si el rango es de 60 días o menos (rango actual: {{ diasRango }} días).
-    </p>
+    <p class="aviso-dia" v-if="avisoRango">{{ avisoRango }}</p>
 
     <!-- Stats -->
     <div class="stats" v-if="filas.length">
@@ -187,7 +214,7 @@
 
 <script>
 const API = (location.port === '3000') ? 'http://localhost:8000/api' : '/api'
-const { createApp, ref, reactive, computed, onMounted, watch } = Vue
+const { createApp, ref, reactive, computed, onMounted } = Vue
 
 createApp({
   setup() {
@@ -196,26 +223,51 @@ createApp({
     const cargando   = ref(false)
     const yaGenero   = ref(false)
 
-    const hoy = new Date().toISOString().slice(0, 10)
-    const hace30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+    // Fechas locales (toISOString devolvería la de UTC, que de noche en Perú ya es el día siguiente)
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const ahora = new Date()
+    const hoy = iso(ahora)
+    const hace30 = iso(new Date(ahora.getTime() - 30 * 86400000))
+    const anioActual = ahora.getFullYear()
+
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    const ANIOS = Array.from({ length: anioActual - 2025 + 1 }, (_, i) => 2025 + i)
 
     const filtros = reactive({
       empresaId:   '',
       tipo:        'mes',
+      // Día: rango de fechas
       fechaInicio: hace30,
       fechaFin:    hoy,
+      // Mes: año y mes de inicio y de fin
+      anioIni: anioActual, mesIni: 1,
+      anioFin: anioActual, mesFin: ahora.getMonth() + 1,
+      // Año: año de inicio y de fin
+      anioDesde: anioActual, anioHasta: anioActual,
     })
 
-    const diasRango = computed(() => {
-      if (!filtros.fechaInicio || !filtros.fechaFin) return 0
-      const ms = new Date(filtros.fechaFin) - new Date(filtros.fechaInicio)
-      return Math.round(ms / 86400000)
+    // Rango de fechas que se envía al backend, según el quiebre elegido
+    const rango = computed(() => {
+      const f = filtros
+      if (f.tipo === 'mes') {
+        return {
+          inicio: iso(new Date(f.anioIni, f.mesIni - 1, 1)),
+          fin:    iso(new Date(f.anioFin, f.mesFin, 0)),
+        }
+      }
+      if (f.tipo === 'anio') return { inicio: `${f.anioDesde}-01-01`, fin: `${f.anioHasta}-12-31` }
+      return { inicio: f.fechaInicio, fin: f.fechaFin }
     })
-    const tipoDiaPermitido = computed(() => diasRango.value >= 0 && diasRango.value <= 60)
 
-    // Si el rango deja de permitir "día" y es el quiebre activo, cae a "mes"
-    watch(tipoDiaPermitido, (permitido) => {
-      if (!permitido && filtros.tipo === 'dia') filtros.tipo = 'mes'
+    const avisoRango = computed(() => {
+      const { inicio, fin } = rango.value
+      if (!inicio || !fin) return 'Completa las fechas del rango.'
+      if (fin < inicio) return 'El fin no puede ser anterior al inicio.'
+      if (filtros.tipo === 'dia') {
+        const dias = Math.round((new Date(fin) - new Date(inicio)) / 86400000)
+        if (dias > 60) return `El quiebre por día admite hasta 60 días (rango actual: ${dias} días).`
+      }
+      return ''
     })
 
     async function cargarEmpresas() {
@@ -229,8 +281,8 @@ createApp({
       try {
         const params = new URLSearchParams({
           tipo:         filtros.tipo,
-          fecha_inicio: filtros.fechaInicio,
-          fecha_fin:    filtros.fechaFin,
+          fecha_inicio: rango.value.inicio,
+          fecha_fin:    rango.value.fin,
         })
         if (filtros.empresaId) params.set('empresa_id', filtros.empresaId)
 
@@ -286,7 +338,7 @@ createApp({
       ]
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Reporte Ventas')
-      XLSX.writeFile(wb, `Reporte_Ventas_${filtros.tipo}_${filtros.fechaInicio}_${filtros.fechaFin}.xlsx`)
+      XLSX.writeFile(wb, `Reporte_Ventas_${filtros.tipo}_${rango.value.inicio}_${rango.value.fin}.xlsx`)
     }
 
     // ── Helpers ─────────────────────────────────────────────────
@@ -305,8 +357,8 @@ createApp({
     })
 
     return {
-      empresas, filas, cargando, yaGenero, filtros, hoy,
-      diasRango, tipoDiaPermitido, gruposPorPeriodo,
+      empresas, filas, cargando, yaGenero, filtros, hoy, MESES, ANIOS,
+      avisoRango, gruposPorPeriodo,
       totalCantidad, totalVentas, totalComision,
       generar, exportarExcel, fmt, fmtPeriodo,
     }
