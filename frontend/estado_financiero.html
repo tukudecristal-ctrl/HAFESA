@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estado financiero — VERDE</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #2b6cb0; color: #fff; padding: .9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.2rem; }
+    header nav a { color: #bee3f8; text-decoration: none; margin-left: 1.2rem; font-size: .9rem; }
+    header nav a:hover { color: #fff; }
+
+    .container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+
+    .filtros { display: flex; flex-wrap: wrap; gap: .9rem; align-items: flex-end; }
+    .field label { display: block; font-size: .78rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .03em; margin-bottom: .3rem; }
+    .field select { padding: .5rem .7rem; border: 1.5px solid #cbd5e0; border-radius: 7px; font-size: .9rem; min-width: 150px; background: #fff; }
+    .field select:focus { outline: none; border-color: #4299e1; }
+    .periodo-etiqueta { margin-left: auto; font-size: .85rem; color: #718096; }
+
+    .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+    .kpi { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 1rem 1.25rem; }
+    .kpi .titulo { font-size: .75rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi .valor { font-size: 1.5rem; font-weight: 800; color: #2d3748; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+    .kpi .valor.neg { color: #c53030; }
+    .kpi .valor.pos { color: #2f855a; }
+
+    .tabla-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    th, td { padding: .55rem .8rem; text-align: right; white-space: nowrap; font-size: .88rem; }
+    thead th { background: #edf2f7; color: #4a5568; font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; border-bottom: 2px solid #cbd5e0; }
+    th.concepto, td.concepto { text-align: left; position: sticky; left: 0; background: #fff; min-width: 210px; }
+    thead th.concepto { background: #edf2f7; }
+    tbody tr { border-bottom: 1px solid #edf2f7; }
+    td.total-col, th.total-col { background: #f7fafc; font-weight: 700; border-left: 2px solid #cbd5e0; }
+    thead th.total-col { background: #e2e8f0; }
+
+    tr.subtotal td { font-weight: 700; background: #f7fafc; border-top: 1px solid #cbd5e0; }
+    tr.subtotal td.concepto, tr.subtotal td.total-col { background: #f7fafc; }
+    tr.resultado td { font-weight: 800; font-size: .95rem; border-top: 2px solid #2d3748; background: #ebf8ff; }
+    tr.resultado td.concepto { background: #ebf8ff; }
+    tr.resultado td.total-col { background: #bee3f8; }
+    tr.memo td { color: #718096; font-size: .8rem; font-weight: 400; }
+    tr.memo td.concepto { padding-left: 2rem; }
+    td.neg, tr.resultado td.neg { color: #c53030; }
+    td.pos { color: #2f855a; }
+    td.cero { color: #a0aec0; }
+
+    .nota { font-size: .78rem; color: #718096; line-height: 1.55; }
+    .nota b { color: #4a5568; }
+    .msg-error { color: #e53e3e; font-size: .9rem; }
+    .cargando { color: #718096; font-size: .9rem; padding: 1rem 0; }
+
+    @media (max-width: 640px) {
+      .container { padding: .75rem; }
+      .kpis { grid-template-columns: 1fr; }
+      .field select { font-size: 16px; min-width: 0; width: 100%; }
+      .field { flex: 1 1 100%; }
+      .periodo-etiqueta { margin-left: 0; }
+      th.concepto, td.concepto { min-width: 150px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>📈 Estado financiero</h1>
+    <nav>
+      <a href="backoffice.html">← Backoffice</a>
+    </nav>
+    <button onclick="Auth.logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem;margin-left:1rem">Salir</button>
+  </header>
+
+  <div class="container">
+
+    <div class="card filtros">
+      <div class="field">
+        <label>Año</label>
+        <select v-model.number="filtros.anio">
+          <option v-for="a in anios" :key="a" :value="a">{{ a }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mes</label>
+        <select v-model="filtros.mes">
+          <option value="">Todo el año</option>
+          <option v-for="(n, i) in MESES" :key="i" :value="i + 1">{{ n }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Empresa</label>
+        <select v-model="filtros.empresaId">
+          <option value="">Todas (consolidado)</option>
+          <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+        </select>
+      </div>
+      <span class="periodo-etiqueta">{{ etiquetaPeriodo }} · Montos en soles (S/)</span>
+    </div>
+
+    <p class="msg-error" v-if="error">{{ error }}</p>
+    <p class="cargando" v-if="cargando && !datos">Cargando...</p>
+
+    <template v-if="datos">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="titulo">Ventas netas</div>
+          <div class="valor">S/ {{ fmt(datos.total.ventas_netas) }}</div>
+        </div>
+        <div class="kpi">
+          <div class="titulo">Compras + comisiones + publicidad</div>
+          <div class="valor">S/ {{ fmt(egresos) }}</div>
+        </div>
+        <div class="kpi">
+          <div class="titulo">Resultado neto</div>
+          <div class="valor" :class="claseSigno(datos.total.resultado_neto)">S/ {{ fmt(datos.total.resultado_neto) }}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tabla-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="concepto">Concepto</th>
+                <template v-if="!datos.mes">
+                  <th v-for="p in datos.meses" :key="p.mes">{{ MESES_CORTO[p.mes - 1] }}</th>
+                  <th class="total-col">Total {{ datos.anio }}</th>
+                </template>
+                <th v-else class="total-col">{{ MESES[datos.mes - 1] }} {{ datos.anio }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="f in filas" :key="f.campo" :class="f.clase">
+                <td class="concepto">{{ f.etiqueta }}</td>
+                <template v-if="!datos.mes">
+                  <td v-for="p in datos.meses" :key="p.mes" :class="celda(f, p)">{{ monto(f, p) }}</td>
+                </template>
+                <td class="total-col" :class="celda(f, datos.total)">{{ monto(f, datos.total) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card nota">
+        <p><b>Ventas</b>: pedidos en estado ENTREGADO por fecha de registro (mismo criterio del Reporte de Ventas), solo productos, sin costo de envío.</p>
+        <p><b>Compras</b>: total de cada compra (productos + transporte + impuesto + otros) por fecha de compra. Es el desembolso del periodo, no el costo de lo vendido.</p>
+        <p><b>Comisiones</b>: las del criterio de la pantalla Comisiones (% de la empresa sobre precio total menos descuento) de los pedidos entregados del periodo, estén pagadas o no; abajo se separa lo pagado de lo pendiente.</p>
+        <p><b>Publicidad</b>: gasto prorrateado por día y asesor, ya en soles, según el día en que cae cada prorrateo.</p>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script>
+const API = (location.port === '3000') ? 'http://localhost:8000/api' : '/api'
+const { createApp, ref, reactive, computed, watch, onMounted } = Vue
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+const FILAS = [
+  { campo: 'ventas_brutas',         etiqueta: 'Ventas',                         clase: '' },
+  { campo: 'descuentos',            etiqueta: '(−) Descuentos',                 clase: '' },
+  { campo: 'ventas_netas',          etiqueta: 'Ventas netas',                   clase: 'subtotal' },
+  { campo: 'compras',               etiqueta: '(−) Compras',                    clase: '' },
+  { campo: 'comisiones',            etiqueta: '(−) Comisiones',                 clase: '' },
+  { campo: 'comisiones_pagadas',    etiqueta: 'de las cuales pagadas',          clase: 'memo' },
+  { campo: 'comisiones_pendientes', etiqueta: 'de las cuales pendientes',       clase: 'memo' },
+  { campo: 'publicidad',            etiqueta: '(−) Publicidad',                 clase: '' },
+  { campo: 'resultado_neto',        etiqueta: 'Resultado neto',                 clase: 'resultado' },
+]
+
+createApp({
+  setup() {
+    const hoy = new Date()
+    const anioActual = hoy.getFullYear()
+    const anios = [anioActual, anioActual - 1, anioActual - 2]
+
+    const empresas = ref([])
+    const datos    = ref(null)
+    const cargando = ref(false)
+    const error    = ref('')
+    const filtros  = reactive({ anio: anioActual, mes: hoy.getMonth() + 1, empresaId: '' })
+
+    const etiquetaPeriodo = computed(() =>
+      filtros.mes ? `${MESES[filtros.mes - 1]} ${filtros.anio}` : `Año ${filtros.anio}`
+    )
+    const egresos = computed(() => datos.value
+      ? parseFloat(datos.value.total.compras) + parseFloat(datos.value.total.comisiones) + parseFloat(datos.value.total.publicidad)
+      : 0)
+
+    async function cargarEmpresas() {
+      const res = await Auth.fetch(`${API}/catalogos/empresas`)
+      if (res) empresas.value = await res.json()
+    }
+
+    let pedidoActual = 0
+    async function cargar() {
+      const idPedido = ++pedidoActual
+      cargando.value = true
+      error.value = ''
+      const params = new URLSearchParams({ anio: filtros.anio })
+      if (filtros.mes) params.set('mes', filtros.mes)
+      if (filtros.empresaId) params.set('empresa_id', filtros.empresaId)
+      try {
+        const res = await Auth.fetch(`${API}/reportes/estado-financiero?${params}`)
+        if (!res || idPedido !== pedidoActual) return
+        const data = await res.json()
+        if (!res.ok) { error.value = data.detail || 'Error al cargar el estado financiero'; datos.value = null; return }
+        datos.value = data
+      } catch {
+        if (idPedido === pedidoActual) { error.value = 'Error de conexión'; datos.value = null }
+      } finally {
+        if (idPedido === pedidoActual) cargando.value = false
+      }
+    }
+
+    function fmt(n) {
+      const v = parseFloat(n || 0)
+      return (v < 0 ? '−' : '') + Math.abs(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+    function monto(fila, periodo) {
+      const v = parseFloat(periodo[fila.campo])
+      if (v === 0) return '–'
+      return fmt(v)
+    }
+    function celda(fila, periodo) {
+      const v = parseFloat(periodo[fila.campo])
+      if (v === 0) return 'cero'
+      return fila.campo === 'resultado_neto' ? (v < 0 ? 'neg' : 'pos') : ''
+    }
+    function claseSigno(n) { const v = parseFloat(n); return v < 0 ? 'neg' : (v > 0 ? 'pos' : '') }
+
+    watch(filtros, cargar)
+
+    onMounted(async () => {
+      if (!Auth.require(['administrador'])) return
+      await Promise.all([cargarEmpresas(), cargar()])
+    })
+
+    return {
+      MESES, MESES_CORTO, anios, empresas, datos, cargando, error, filtros,
+      etiquetaPeriodo, egresos, filas: FILAS, fmt, monto, celda, claseSigno,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

@@ -576,3 +576,25 @@ class ReporteVentaItem(BaseModel):
     suma_cantidad: int
     suma_precio_venta: Decimal
     suma_comision: Decimal
+
+
+# ── Estado financiero ────────────────────────────────────────────
+class EstadoFinancieroPeriodo(BaseModel):
+    mes: Optional[int] = None
+    ventas_brutas: Decimal
+    descuentos: Decimal
+    ventas_netas: Decimal
+    compras: Decimal
+    comisiones: Decimal
+    comisiones_pagadas: Decimal
+    comisiones_pendientes: Decimal
+    publicidad: Decimal
+    resultado_neto: Decimal
+
+
+class EstadoFinancieroOut(BaseModel):
+    anio: int
+    mes: Optional[int]
+    empresa_id: Optional[int]
+    meses: list[EstadoFinancieroPeriodo]
+    total: EstadoFinancieroPeriodo
