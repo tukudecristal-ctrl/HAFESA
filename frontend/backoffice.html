@@ -103,6 +103,18 @@
     }
     td { padding: .7rem 1rem; border-top: 1px solid #e2e8f0; vertical-align: middle; }
     tr:hover td { background: #f7fafc; }
+    td.col-producto { width: 300px; max-width: 300px; }
+    .prod-linea { display: flex; align-items: flex-start; gap: .3rem; }
+    .prod-nombre {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .prod-cant { flex: none; color: #718096; }
 
     /* Badge estado */
     .badge {
@@ -316,7 +328,10 @@
       tbody td:nth-child(4) { font-size: .78rem; color: #718096; }
       tbody td:nth-child(4)::before { content: 'Vendedor: '; font-weight: 600; }
       /* Producto */
-      tbody td:nth-child(5) { font-size: .82rem; max-width: none !important; margin-top: .3rem; }
+      tbody td:nth-child(5) { font-size: .82rem; width: auto; max-width: none !important; margin-top: .3rem; }
+      .prod-linea { display: block; }
+      .prod-nombre { display: inline; overflow: visible; }
+      .prod-cant { margin-left: .3rem; }
       /* Cantidad — ya visible como ×N dentro del producto */
       tbody td:nth-child(6) { display: none; }
       /* Total */
@@ -380,6 +395,7 @@
         <span class="nav-dropdown-trigger" @click="toggleMenu('admin')">Administración <span class="caret">▾</span></span>
         <div class="nav-dropdown-panel">
           <div class="nav-dropdown-label">Administración</div>
+          <a href="estado_financiero.html" @click="cerrarMenus">📈 Estado financiero</a>
           <a href="publicidad.html"       @click="cerrarMenus">📣 Publicidad</a>
           <a href="crud_proveedores.html" @click="cerrarMenus">Proveedores</a>
           <a href="crud_empresas.html"    @click="cerrarMenus">Empresas</a>
@@ -395,7 +411,6 @@
       <button @click="logout" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:.3rem .75rem;border-radius:20px;cursor:pointer;font-size:.82rem">Salir</button>
     </div>
   </header>
-          <a href="estado_financiero.html" @click="cerrarMenus">📈 Estado financiero</a>
 
   <div class="container">
 
@@ -467,10 +482,11 @@
               <div style="font-size:.75rem;color:#718096">{{ p.dni }}</div>
             </td>
             <td>{{ vendedoresMap[p.vendedor_id] || p.vendedor_id }}</td>
-            <td style="font-size:.82rem;max-width:180px">
+            <td class="col-producto" style="font-size:.82rem">
               <template v-if="p.detalles && p.detalles.length">
-                <div v-for="d in p.detalles" :key="d.id" style="white-space:nowrap">
-                  {{ productosMap[d.producto_id] || 'Producto' }} <span style="color:#718096">×{{ d.cantidad }}</span>
+                <div v-for="d in p.detalles" :key="d.id" class="prod-linea" :title="productosMap[d.producto_id]">
+                  <span class="prod-nombre">{{ productosMap[d.producto_id] || 'Producto' }}</span>
+                  <span class="prod-cant">×{{ d.cantidad }}</span>
                 </div>
               </template>
               <template v-else>{{ productosMap[p.producto_id] || '—' }}</template>
