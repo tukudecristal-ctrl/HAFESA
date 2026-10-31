@@ -188,7 +188,6 @@
     }
     .badge-REGISTRADO     { background: #bee3f8; color: #2c5282; }
     .badge-EMPACADO       { background: #fefcbf; color: #744210; }
-    .badge-ROTULO_IMPRESO { background: #fbd38d; color: #7b341e; }
     .badge-DEPOSITADO     { background: #e9d8fd; color: #44337a; }
     .badge-ENTREGADO      { background: #c6f6d5; color: #22543d; }
     .badge-CANCELADO      { background: #fed7d7; color: #742a2a; }
@@ -362,7 +361,6 @@ const { createApp, ref, onMounted } = Vue
 const LABELS = {
   REGISTRADO:     'Pedido Registrado',
   EMPACADO:       'Empacado',
-  ROTULO_IMPRESO: 'Rótulo Impreso',
   DEPOSITADO:     'Depositado en Shalom',
   ENTREGADO:      'Entregado al Cliente',
   CANCELADO:      'Pedido Cancelado',
@@ -370,12 +368,11 @@ const LABELS = {
 const ICONOS = {
   REGISTRADO:     '📋',
   EMPACADO:       '📦',
-  ROTULO_IMPRESO: '🏷',
   DEPOSITADO:     '🚚',
   ENTREGADO:      '✅',
   CANCELADO:      '✕',
 }
-const ORDEN = ['REGISTRADO', 'EMPACADO', 'ROTULO_IMPRESO', 'DEPOSITADO', 'ENTREGADO']
+const ORDEN = ['REGISTRADO', 'EMPACADO', 'DEPOSITADO', 'ENTREGADO']
 
 createApp({
   setup() {

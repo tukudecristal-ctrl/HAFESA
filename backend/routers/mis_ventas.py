@@ -35,7 +35,6 @@ def mis_pedidos(
         fecha_estado = {
             "REGISTRADO":     p.fecha_registro,
             "EMPACADO":       p.fecha_empacado,
-            "ROTULO_IMPRESO": p.fecha_rotulo,
             "DEPOSITADO":     p.fecha_deposito,
             "ENTREGADO":      p.fecha_entrega,
             "CANCELADO":      p.fecha_cancelado,

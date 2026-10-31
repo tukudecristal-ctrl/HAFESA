@@ -43,7 +43,6 @@
     .badge { padding: .18rem .6rem; border-radius: 20px; font-size: .72rem; font-weight: 700; white-space: nowrap; }
     .badge-REGISTRADO     { background: #e9d8fd; color: #44337a; }
     .badge-EMPACADO       { background: #bee3f8; color: #2c5282; }
-    .badge-ROTULO_IMPRESO { background: #fefcbf; color: #744210; }
     .badge-DEPOSITADO     { background: #c6f6d5; color: #22543d; }
     .badge-ENTREGADO      { background: #9ae6b4; color: #1c4532; }
     .badge-CANCELADO      { background: #fed7d7; color: #742a2a; }
@@ -192,7 +191,6 @@
         <option value="">Todos los estados</option>
         <option value="REGISTRADO">📋 Registrado</option>
         <option value="EMPACADO">📦 Empacado</option>
-        <option value="ROTULO_IMPRESO">🏷 Rotulado</option>
         <option value="DEPOSITADO">🚚 Depositado</option>
         <option value="ENTREGADO">✅ Entregado</option>
         <option value="CANCELADO">❌ Cancelado</option>
@@ -273,8 +271,7 @@ createApp({
     })
 
     function estadoLabel(e) {
-      const MAP = { ROTULO_IMPRESO: 'ROTULADO' }
-      return MAP[e] || e.replace('_', ' ')
+      return e.replace('_', ' ')
     }
 
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

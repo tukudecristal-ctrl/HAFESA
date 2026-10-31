@@ -162,7 +162,7 @@ CREATE TABLE pedidos (
     resta_pagar NUMERIC(10,2),        -- calculado: precio_total - descuento - separacion
     -- Estado del flujo
     estado VARCHAR(30) DEFAULT 'REGISTRADO',
-    -- REGISTRADO | EMPACADO | ROTULO_IMPRESO | DEPOSITADO | ENTREGADO | CANCELADO
+    -- REGISTRADO | EMPACADO | DEPOSITADO | ENTREGADO | CANCELADO
     fecha_registro TIMESTAMP DEFAULT NOW(),
     fecha_empacado TIMESTAMP,
     fecha_rotulo TIMESTAMP,

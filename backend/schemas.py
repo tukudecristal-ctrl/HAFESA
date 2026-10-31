@@ -188,12 +188,11 @@ def seleccionar_precio(producto, cantidad: int) -> Decimal:
 
 
 # ── Pedido ────────────────────────────────────────────────────
-ESTADOS_VALIDOS = ["REGISTRADO", "EMPACADO", "ROTULO_IMPRESO", "DEPOSITADO", "ENTREGADO", "CANCELADO"]
+ESTADOS_VALIDOS = ["REGISTRADO", "EMPACADO", "DEPOSITADO", "ENTREGADO", "CANCELADO"]
 
 SIGUIENTE_ESTADO = {
     "REGISTRADO": "EMPACADO",
-    "EMPACADO": "ROTULO_IMPRESO",
-    "ROTULO_IMPRESO": "DEPOSITADO",
+    "EMPACADO": "DEPOSITADO",
     "DEPOSITADO": "ENTREGADO",
 }
 

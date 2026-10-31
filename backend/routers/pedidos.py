@@ -11,7 +11,6 @@ router = APIRouter()
 
 TIMESTAMP_POR_ESTADO = {
     "EMPACADO":       "fecha_empacado",
-    "ROTULO_IMPRESO": "fecha_rotulo",
     "DEPOSITADO":     "fecha_deposito",
     "ENTREGADO":      "fecha_entrega",
     "CANCELADO":      "fecha_cancelado",
@@ -344,7 +343,6 @@ def obtener_seguimiento(pedido_id: int, db: Session = Depends(get_db)):
     etapas = [
         {"estado": "REGISTRADO",     "timestamp": pedido.fecha_registro},
         {"estado": "EMPACADO",       "timestamp": pedido.fecha_empacado},
-        {"estado": "ROTULO_IMPRESO", "timestamp": pedido.fecha_rotulo},
         {"estado": "DEPOSITADO",     "timestamp": pedido.fecha_deposito},
         {"estado": "ENTREGADO",      "timestamp": pedido.fecha_entrega},
     ]
