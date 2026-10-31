@@ -50,7 +50,12 @@
     .btn-secondary { background: #e2e8f0; color: #4a5568; }
 
     .msg-error { color: #e53e3e; font-size: .8rem; margin-top: .5rem; }
-    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #2d3748; color: #fff; padding: .75rem 1.2rem; border-radius: 8px; font-size: .9rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200; }
+    .msg-ok {
+      display: flex; align-items: flex-start; gap: .6rem; margin-bottom: 1rem;
+      background: #f0fff4; border: 1.5px solid #9ae6b4; color: #22543d; border-radius: 8px; padding: .8rem 1rem; font-size: .9rem;
+    }
+    .msg-ok b { display: block; font-size: 1rem; }
+    .msg-ok .cerrar { margin-left: auto; background: none; border: none; color: #22543d; font-size: 1.1rem; cursor: pointer; line-height: 1; }
 
     @media (max-width: 640px) {
       .container { padding: .75rem; }
@@ -74,6 +79,15 @@
     <div class="card">
       <h2>Registrar gasto de publicidad</h2>
 
+      <div class="msg-ok" v-if="guardado" role="status">
+        <span>✅</span>
+        <div>
+          <b>Guardado correctamente</b>
+          {{ guardado }}
+        </div>
+        <button class="cerrar" @click="guardado = ''" aria-label="Cerrar">×</button>
+      </div>
+
       <div class="row">
         <div class="field">
           <label>Medio</label>
@@ -96,23 +110,19 @@
 
       <div class="row">
         <div class="field">
-          <label>Fecha inicio</label>
-          <input type="date" v-model="form.fechaInicio" :max="form.fechaFinal || undefined" />
+          <label>Fecha</label>
+          <input type="date" v-model="form.fecha" />
         </div>
         <div class="field">
-          <label>Fecha final</label>
-          <input type="date" v-model="form.fechaFinal" :min="form.fechaInicio || undefined" />
+          <label>Monto ({{ form.moneda === 'PEN' ? 'S/' : 'US$' }})</label>
+          <input type="number" step="0.01" min="0.01" v-model.number="form.monto" />
         </div>
       </div>
 
-      <div class="row">
-        <div class="field" v-if="form.moneda === 'USD'">
+      <div class="row" v-if="form.moneda === 'USD'">
+        <div class="field" style="grid-column: 1 / -1">
           <label>Tipo de cambio</label>
           <input type="number" step="0.001" min="0.001" v-model.number="form.tipoCambio" />
-        </div>
-        <div class="field" :style="form.moneda === 'PEN' ? 'grid-column: 1 / -1' : ''">
-          <label>Monto ({{ form.moneda === 'PEN' ? 'S/' : 'US$' }})</label>
-          <input type="number" step="0.01" min="0.01" v-model.number="form.monto" />
         </div>
       </div>
 
@@ -134,10 +144,10 @@
 
       <div class="resumen" :class="{ invalido: !resumenValido }">
         <div v-if="resumenValido">
-          {{ dias }} día(s) × {{ form.vendedorIds.length }} asesor(es) = {{ celdas }} registros de prorateo
-          <div style="margin-top:.3rem">Monto por día y asesor: <span class="por-celda">S/ {{ fmt(montoPorCelda) }}</span></div>
+          Se reparte entre {{ form.vendedorIds.length }} asesor(es) el {{ fmtFecha(form.fecha) }}
+          <div style="margin-top:.3rem">Monto por asesor: <span class="por-celda">S/ {{ fmt(montoPorCelda) }}</span></div>
         </div>
-        <div v-else>Completa fechas válidas, el monto y al menos un asesor para ver el prorateo.</div>
+        <div v-else>Completa la fecha, el monto y al menos un asesor para ver el reparto.</div>
       </div>
 
       <p class="msg-error" v-if="error">{{ error }}</p>
@@ -151,7 +161,6 @@
     </div>
   </div>
 
-  <div class="toast" v-if="toast">{{ toast }}</div>
 </div>
 
 <script>
@@ -163,16 +172,18 @@ createApp({
     const vendedores = ref([])
     const guardando  = ref(false)
     const error      = ref('')
-    const toast      = ref('')
+    const guardado   = ref('')
 
-    const hoy = new Date().toISOString().slice(0, 10)
+    // Fecha local (toISOString devolvería la de UTC, que de noche en Perú ya es el día siguiente)
+    const d0 = new Date()
+    const hoy = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-${String(d0.getDate()).padStart(2, '0')}`
+    const MEDIOS = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'Youtube', whatsapp: 'Whatsapp', meta_ads: 'Meta Ads' }
 
     function formInicial() {
       return {
-        medio: 'facebook',
+        medio: 'meta_ads',
         moneda: 'PEN',
-        fechaInicio: hoy,
-        fechaFinal: hoy,
+        fecha: hoy,
         tipoCambio: 3.80,
         monto: null,
         vendedorIds: [],
@@ -181,20 +192,14 @@ createApp({
     }
     const form = reactive(formInicial())
 
-    const dias = computed(() => {
-      if (!form.fechaInicio || !form.fechaFinal) return 0
-      const ms = new Date(form.fechaFinal) - new Date(form.fechaInicio)
-      if (ms < 0) return 0
-      return Math.round(ms / 86400000) + 1
-    })
-    const celdas = computed(() => dias.value * form.vendedorIds.length)
+    const celdas = computed(() => form.fecha ? form.vendedorIds.length : 0)
     const montoSoles = computed(() => {
       const monto = parseFloat(form.monto) || 0
       const tc = form.moneda === 'USD' ? (parseFloat(form.tipoCambio) || 0) : 1
       return monto * tc
     })
     const resumenValido = computed(() =>
-      dias.value > 0 && form.vendedorIds.length > 0 && parseFloat(form.monto) > 0 &&
+      !!form.fecha && form.vendedorIds.length > 0 && parseFloat(form.monto) > 0 &&
       (form.moneda === 'PEN' || parseFloat(form.tipoCambio) > 0)
     )
     const montoPorCelda = computed(() => celdas.value > 0 ? montoSoles.value / celdas.value : 0)
@@ -209,17 +214,24 @@ createApp({
       error.value = ''
     }
 
+    function fmtFecha(iso) {
+      if (!iso) return ''
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y}`
+    }
+
     async function guardar() {
       if (!resumenValido.value) return
       guardando.value = true
       error.value = ''
+      guardado.value = ''
       try {
         const res = await Auth.fetch(`${API}/publicidad/`, {
           method: 'POST',
           body: JSON.stringify({
             medio:         form.medio,
-            fecha_inicio:  form.fechaInicio,
-            fecha_final:   form.fechaFinal,
+            fecha_inicio:  form.fecha,
+            fecha_final:   form.fecha,
             moneda:        form.moneda,
             monto:         form.monto,
             tipo_cambio:   form.moneda === 'USD' ? form.tipoCambio : 1,
@@ -232,7 +244,7 @@ createApp({
           error.value = data.detail || 'Error al guardar'
           return
         }
-        mostrarToast(`✅ Publicidad registrada — ${data.detalles.length} registros de prorateo`)
+        guardado.value = `${MEDIOS[data.medio] || data.medio} · ${fmtFecha(data.fecha_inicio)} · S/ ${fmt(data.monto_soles)} repartidos entre ${data.detalles.length} asesor(es).`
         resetForm()
       } catch {
         error.value = 'Error de conexión'
@@ -241,7 +253,6 @@ createApp({
       }
     }
 
-    function mostrarToast(msg) { toast.value = msg; setTimeout(() => toast.value = '', 3500) }
     function fmt(n) { return parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 
     onMounted(async () => {
@@ -250,9 +261,9 @@ createApp({
     })
 
     return {
-      vendedores, form, guardando, error, toast,
-      dias, celdas, resumenValido, montoPorCelda,
-      guardar, resetForm, fmt,
+      vendedores, form, guardando, error, guardado,
+      celdas, resumenValido, montoPorCelda,
+      guardar, resetForm, fmt, fmtFecha,
     }
   }
 }).mount('#app')
