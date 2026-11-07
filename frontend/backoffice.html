@@ -7,6 +7,7 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="xlsx.min.js"></script>
   <script src="auth.js"></script>
+  <script src="etiquetas.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -188,6 +189,20 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .imp-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; display: flex;
+                   align-items: center; justify-content: center; padding: 1rem; overflow-y: auto }
+    .imp-modal { background: #fff; border-radius: 12px; padding: 1.4rem 1.6rem; width: 100%; max-width: 460px;
+                 box-shadow: 0 8px 32px rgba(0,0,0,.25); margin: auto }
+    .imp-modal h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: .8rem }
+    .imp-resumen { font-size: 1rem; color: #2d3748; line-height: 1.5 }
+    .imp-resumen b { font-size: 1.25rem; color: #2b6cb0 }
+    .imp-nota { font-size: .82rem; color: #975a16; background: #fffff0; border-radius: 6px; padding: .35rem .6rem; margin-top: .5rem }
+    .imp-previa { margin-top: .9rem; text-align: center }
+    .imp-previa span { display: block; font-size: .75rem; color: #718096; margin-bottom: .35rem }
+    .imp-previa iframe { width: 100mm; height: 100mm; max-width: 100%; border: 1px solid #cbd5e0; background: #fff;
+                         box-shadow: 0 2px 8px rgba(0,0,0,.12) }
+    .imp-ayuda { font-size: .78rem; color: #718096; margin-top: .8rem; line-height: 1.4 }
+    .imp-acciones { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem }
     .toast {
       position: fixed;
       bottom: 1.5rem;
@@ -451,6 +466,7 @@
         <button class="btn-filtro btn-buscar"  @click="cargarPedidos">Buscar</button>
         <button class="btn-filtro btn-limpiar" @click="limpiar" style="margin-left:.4rem">Limpiar</button>
         <button class="btn-filtro" style="background: #48bb78; color: #fff; margin-left:.4rem" @click="exportarRotulosExcel">📊 Rotulo +</button>
+        <button class="btn-filtro" style="background: #2d3748; color: #fff; margin-left:.4rem" @click="abrirImpresion" :disabled="preparandoImpresion">🖨 IMPRIMIR</button>
       </div>
     </div>
 
@@ -526,6 +542,36 @@
   </div>
 
   <!-- Toast -->
+  <!-- Confirmación de impresión de etiquetas -->
+  <div class="imp-overlay" v-if="impresion.abierto" @click.self="cerrarImpresion">
+    <div class="imp-modal" role="dialog" aria-modal="true" aria-labelledby="imp-titulo">
+      <h2 id="imp-titulo">🖨 Imprimir etiquetas</h2>
+      <p class="imp-resumen">
+        Se imprimirán <b>{{ impresion.etiquetas.length }}</b>
+        {{ impresion.etiquetas.length === 1 ? 'etiqueta' : 'etiquetas' }}
+        para <b>{{ impresion.envios }}</b> {{ impresion.envios === 1 ? 'envío' : 'envíos' }}
+        (todos los pedidos de la lista).
+      </p>
+      <p class="imp-nota" v-if="impresion.etiquetas.length > impresion.envios">
+        Los pedidos con más de 6 productos usan más de una etiqueta.
+      </p>
+      <p class="imp-nota" v-if="impresion.cancelados">
+        {{ impresion.cancelados }} {{ impresion.cancelados === 1 ? 'pedido cancelado no se imprime' : 'pedidos cancelados no se imprimen' }}.
+      </p>
+      <div class="imp-previa">
+        <span>Vista previa (primera etiqueta, 10 x 10 cm)</span>
+        <iframe :srcdoc="impresion.previa" title="Vista previa de la etiqueta"></iframe>
+      </div>
+      <p class="imp-ayuda">En el cuadro de impresión elige la impresora de etiquetas, tamaño de papel 100 x 100 mm, sin márgenes y escala 100 %.</p>
+      <div class="imp-acciones">
+        <button class="btn-filtro btn-limpiar" @click="cerrarImpresion">Cancelar</button>
+        <button class="btn-filtro btn-buscar" @click="confirmarImpresion" :disabled="impresion.imprimiendo">
+          {{ impresion.imprimiendo ? 'Abriendo impresión...' : 'Imprimir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" v-if="toast" @click="toast=''">{{ toast }}</div>
 
 </div>
@@ -697,6 +743,7 @@ createApp({
           'ID':           p.id,
           'Cliente':      p.nombre_cliente,
           'DNI':          p.dni,
+          'Teléfono':     String(p.telefono || ''),
           'Agencia':      p.ciudad_agencia || 'No especificada',
           'Dirección':    direccion,
           'Productos':    nombreProducto,
@@ -704,6 +751,7 @@ createApp({
           'Empresa':      p.nombre_empresa || '—',
           'Costo Envío':  fmt(p.costo_envio),
           'Resta Pagar':  fmt(p.resta_pagar),
+          'Detalle':      p.detalle_observacion || '',
         }
       })
 
@@ -712,13 +760,15 @@ createApp({
         { wch: 8 },   // ID
         { wch: 20 },  // Cliente
         { wch: 12 },  // DNI
+        { wch: 12 },  // Teléfono
         { wch: 20 },  // Agencia
         { wch: 30 },  // Dirección
         { wch: 25 },  // Productos
         { wch: 10 },  // Cantidad
         { wch: 20 },  // Empresa
         { wch: 14 },  // Costo Envío
-        { wch: 14 }   // Resta a Pagar
+        { wch: 14 },  // Resta a Pagar
+        { wch: 40 }   // Detalle
       ]
 
       const wb = XLSX.utils.book_new()
@@ -736,6 +786,41 @@ createApp({
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
       })
+    }
+
+    // ── Impresión de etiquetas 100 x 100 mm ─────────────────────
+    const preparandoImpresion = ref(false)
+    const impresion = reactive({ abierto: false, etiquetas: [], envios: 0, cancelados: 0, previa: '', imprimiendo: false })
+
+    async function abrirImpresion() {
+      if (!pedidos.value.length) { mostrarToast('⚠️ No hay pedidos para imprimir'); return }
+      preparandoImpresion.value = true
+      try {
+        const assets = await Etiquetas.assets()
+        const r = Etiquetas.construir(pedidos.value, {
+          vendedoresMap: vendedoresMap.value, productosMap: productosMap.value, assets,
+        })
+        if (!r.etiquetas.length) { mostrarToast('⚠️ Todos los pedidos de la lista están cancelados'); return }
+        Object.assign(impresion, r, { previa: Etiquetas.documento(r.etiquetas.slice(0, 1)), imprimiendo: false, abierto: true })
+      } catch (e) {
+        mostrarToast('❌ No se pudieron preparar las etiquetas: ' + e.message)
+      } finally {
+        preparandoImpresion.value = false
+      }
+    }
+
+    function cerrarImpresion() { impresion.abierto = false }
+
+    async function confirmarImpresion() {
+      impresion.imprimiendo = true
+      try {
+        await Etiquetas.imprimir(impresion.etiquetas)
+        impresion.abierto = false
+      } catch (e) {
+        mostrarToast('❌ Error al imprimir: ' + e.message)
+      } finally {
+        impresion.imprimiendo = false
+      }
     }
 
     function mostrarToast(msg) {
@@ -766,7 +851,7 @@ createApp({
     })
 
     return {
-      tiene, esAdmin,
+      tiene, esAdmin, impresion, preparandoImpresion, abrirImpresion, cerrarImpresion, confirmarImpresion,
       empresas, pedidos, filtros, estados, iconosEstado, cargando, avanzando, cancelando, toast, conteoEstados,
       vendedoresMap, productosMap, currentUser, navOpen, menuAbierto, toggleMenu, cerrarMenus,
       cargarPedidos, avanzarEstado, cancelarPedido, abrirRotulo, abrirSeguimiento, limpiar, exportarRotulosExcel, fmtFecha, fmt, logout, estadoLabel,
