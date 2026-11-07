@@ -144,13 +144,6 @@
           <option value="logistica">Logística</option>
         </select>
       </div>
-      <div class="form-group" v-if="modal.form.rol === 'vendedor'">
-        <label>Vendedor vinculado <span class="req">*</span></label>
-        <select v-model="modal.form.vendedor_id">
-          <option :value="null">— Selecciona —</option>
-          <option v-for="v in vendedores" :key="v.id" :value="v.id">{{ v.nombre_completo }}</option>
-        </select>
-      </div>
       <div class="form-group" v-if="!modal.editando">
         <label>Contraseña <span class="req">*</span></label>
         <input type="password" v-model="modal.form.password" placeholder="••••••••" />
@@ -205,7 +198,7 @@ createApp({
 
     const modal = reactive({
       visible: false, editando: false, id: null, error: '', guardando: false,
-      form: { dni: '', nombre: '', rol: 'vendedor', vendedor_id: null, password: '' },
+      form: { dni: '', nombre: '', rol: 'vendedor', password: '' },
     })
 
     const resetModal = reactive({
@@ -219,6 +212,13 @@ createApp({
       )
     })
 
+    async function cargarVendedores() {
+      const res = await Auth.fetch(`${API}/catalogos/vendedores?todos=true`)
+      if (!res) return
+      vendedores.value = await res.json()
+      vendedoresMap.value = Object.fromEntries(vendedores.value.map(v => [v.id, v.nombre_completo]))
+    }
+
     async function cargar() {
       const res = await Auth.fetch(`${API}/auth/usuarios`)
       if (res) usuarios.value = await res.json()
@@ -226,13 +226,13 @@ createApp({
 
     function abrirNuevo() {
       modal.editando = false; modal.id = null; modal.error = ''
-      modal.form = { dni: '', nombre: '', rol: 'vendedor', vendedor_id: null, password: '' }
+      modal.form = { dni: '', nombre: '', rol: 'vendedor', password: '' }
       modal.visible = true
     }
 
     function abrirEditar(u) {
       modal.editando = true; modal.id = u.id; modal.error = ''
-      modal.form = { nombre: u.nombre, rol: u.rol, vendedor_id: u.vendedor_id }
+      modal.form = { nombre: u.nombre, rol: u.rol }
       modal.visible = true
     }
 
@@ -250,18 +250,16 @@ createApp({
       if (!modal.editando && !modal.form.dni?.trim()) { modal.error = 'El DNI es obligatorio'; return }
       if (!modal.editando && !/^\d{8}$/.test(modal.form.dni)) { modal.error = 'El DNI debe tener 8 dígitos'; return }
       if (!modal.editando && !modal.form.password) { modal.error = 'La contraseña es obligatoria'; return }
-      if (modal.form.rol === 'vendedor' && !modal.form.vendedor_id) { modal.error = 'Selecciona el vendedor vinculado'; return }
 
       modal.error = ''; modal.guardando = true
       try {
         const url    = modal.editando ? `${API}/auth/usuarios/${modal.id}` : `${API}/auth/usuarios`
         const method = modal.editando ? 'PUT' : 'POST'
         const body   = { ...modal.form }
-        if (modal.form.rol !== 'vendedor') body.vendedor_id = null
         const res  = await Auth.fetch(url, { method, body: JSON.stringify(body) })
         const data = await res.json()
         if (!res.ok) { modal.error = data.detail || 'Error al guardar'; return }
-        cerrarModal(); await cargar()
+        cerrarModal(); await Promise.all([cargar(), cargarVendedores()])
         mostrarToast(modal.editando ? '✅ Usuario actualizado' : '✅ Usuario creado')
       } catch { modal.error = 'Error de conexión' }
       finally  { modal.guardando = false }
@@ -293,11 +291,7 @@ createApp({
 
     onMounted(async () => {
       if (!Auth.require(['administrador'])) return
-      const resV = await Auth.fetch(`${API}/catalogos/vendedores?todos=true`)
-      if (resV) {
-        vendedores.value = await resV.json()
-        vendedores.value.forEach(v => vendedoresMap.value[v.id] = v.nombre_completo)
-      }
+      await cargarVendedores()
       await cargar()
     })
 

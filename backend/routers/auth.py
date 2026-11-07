@@ -12,6 +12,8 @@ router = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY", "cambia-esta-clave-en-produccion")
 ALGORITHM = "HS256"
 TOKEN_HOURS = 10
+# Empresa en la que se crea el vendedor automático de un usuario con rol vendedor (Verde / VIISA VERDE SAC)
+EMPRESA_VENDEDOR_AUTOMATICO = "EMP001"
 
 
 def _hash(password: str) -> str:
@@ -57,6 +59,24 @@ def me(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+def _crear_vendedor_para(db: Session, dni: str, nombre: str) -> models.Vendedor:
+    """Crea el registro de vendedor de un usuario con rol vendedor (queda vinculado a su usuario)."""
+    empresa = db.query(models.Empresa).filter(models.Empresa.codigo == EMPRESA_VENDEDOR_AUTOMATICO).first()
+    if not empresa:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No existe la empresa {EMPRESA_VENDEDOR_AUTOMATICO} para crear el vendedor del usuario",
+        )
+    codigo, n = dni, 2
+    while db.query(models.Vendedor).filter(models.Vendedor.codigo == codigo).first():
+        codigo = f"{dni}-{n}"
+        n += 1
+    vendedor = models.Vendedor(codigo=codigo, nombre_completo=nombre.strip(), empresa_id=empresa.id, activo=True)
+    db.add(vendedor)
+    db.flush()
+    return vendedor
+
+
 # ── CRUD usuarios (solo administrador) ─────────────────────────
 @router.get("/usuarios", response_model=list[schemas.UsuarioOut])
 def listar_usuarios(
@@ -74,14 +94,15 @@ def crear_usuario(
 ):
     if db.query(models.Usuario).filter(models.Usuario.dni == data.dni).first():
         raise HTTPException(status_code=400, detail="El DNI ya está registrado")
-    if data.rol == "vendedor" and not data.vendedor_id:
-        raise HTTPException(status_code=400, detail="Un usuario vendedor requiere vendedor_id")
+    vendedor_id = data.vendedor_id
+    if data.rol == "vendedor" and not vendedor_id:
+        vendedor_id = _crear_vendedor_para(db, data.dni, data.nombre).id
     usuario = models.Usuario(
         dni=data.dni,
         password_hash=_hash(data.password),
         nombre=data.nombre,
         rol=data.rol,
-        vendedor_id=data.vendedor_id,
+        vendedor_id=vendedor_id,
     )
     db.add(usuario)
     db.commit()
@@ -101,6 +122,8 @@ def actualizar_usuario(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(usuario, field, value)
+    if usuario.rol == "vendedor" and not usuario.vendedor_id:
+        usuario.vendedor_id = _crear_vendedor_para(db, usuario.dni, usuario.nombre).id
     db.commit()
     db.refresh(usuario)
     return usuario
