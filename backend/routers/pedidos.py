@@ -5,6 +5,7 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from database import get_db
+from dependencies import require_pantalla
 import models, schemas
 
 router = APIRouter()
@@ -165,6 +166,42 @@ def crear_pedido(data: schemas.PedidoCreate, db: Session = Depends(get_db)):
 
 
 # ── Detalle de pedido ──────────────────────────────────────────
+# ── Empacar en lote (tras imprimir las etiquetas) ──────────────
+@router.post("/empacar-lote")
+def empacar_lote(
+    data: schemas.EmpacarLoteInput,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_pantalla("pedidos")),
+):
+    """Pasa a EMPACADO los pedidos indicados que sigan en REGISTRADO.
+
+    A diferencia de /avanzar (un paso desde el estado actual), aquí solo se mueve lo que está en
+    REGISTRADO: si alguien ya lo empacó o lo avanzó, se omite en vez de empujarlo más adelante.
+    """
+    pedidos = db.query(models.Pedido).filter(models.Pedido.id.in_(data.pedido_ids)).all()
+    por_id = {p.id: p for p in pedidos}
+    usuario = user.get("nombre") or "backoffice"
+
+    actualizados, omitidos = [], []
+    ahora = datetime.now()
+    for pid in data.pedido_ids:
+        p = por_id.get(pid)
+        if p is None:
+            omitidos.append({"id": pid, "estado": None})
+        elif p.estado != "REGISTRADO":
+            omitidos.append({"id": pid, "estado": p.estado})
+        else:
+            db.add(models.FlujoLog(
+                pedido_id=p.id, estado_anterior="REGISTRADO", estado_nuevo="EMPACADO",
+                usuario=usuario, observacion="Etiqueta impresa",
+            ))
+            p.estado = "EMPACADO"
+            p.fecha_empacado = ahora
+            actualizados.append(pid)
+    db.commit()
+    return {"actualizados": actualizados, "omitidos": omitidos}
+
+
 @router.get("/{pedido_id}", response_model=schemas.PedidoDetalleOut)
 def obtener_pedido(pedido_id: int, db: Session = Depends(get_db)):
     pedido = (

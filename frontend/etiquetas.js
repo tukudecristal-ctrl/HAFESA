@@ -145,21 +145,33 @@ const Etiquetas = (() => {
       </section>`
   }
 
-  // Devuelve las etiquetas de todos los pedidos (omite los cancelados) y los conteos para confirmar.
+  // Etiquetas que necesita UNA copia del pedido (más de 6 productos continúan en otra etiqueta).
+  function etiquetasPorPedido(p, productosMap = {}) {
+    return Math.max(1, Math.ceil(productosDe(p, productosMap).length / PRODUCTOS_POR_ETIQUETA))
+  }
+
+  // Devuelve las etiquetas de los pedidos (omite los cancelados) y los conteos para confirmar.
+  // Cada pedido puede traer `copias` (por defecto 1; 0 lo omite): se repite el juego completo de etiquetas.
   function construir(pedidos, { vendedoresMap = {}, productosMap = {}, assets }) {
     const validos = pedidos.filter(p => p.estado !== 'CANCELADO')
     const etiquetas = []
+    let envios = 0
     for (const p of validos) {
+      const copias = p.copias === undefined ? 1 : Math.max(0, parseInt(p.copias, 10) || 0)
+      if (!copias) continue
+      envios++
       const items = productosDe(p, productosMap)
       const totalUnidades = items.reduce((s, i) => s + (parseInt(i.cantidad, 10) || 0), 0)
-      const total = Math.max(1, Math.ceil(items.length / PRODUCTOS_POR_ETIQUETA))
+      const total = etiquetasPorPedido(p, productosMap)
       const asesor = nombreAsesor(vendedoresMap[p.vendedor_id])
-      for (let n = 0; n < total; n++) {
-        const parte = items.slice(n * PRODUCTOS_POR_ETIQUETA, (n + 1) * PRODUCTOS_POR_ETIQUETA)
-        etiquetas.push(htmlEtiqueta(p, parte, totalUnidades, n + 1, total, asesor, assets))
+      for (let c = 0; c < copias; c++) {
+        for (let n = 0; n < total; n++) {
+          const parte = items.slice(n * PRODUCTOS_POR_ETIQUETA, (n + 1) * PRODUCTOS_POR_ETIQUETA)
+          etiquetas.push(htmlEtiqueta(p, parte, totalUnidades, n + 1, total, asesor, assets))
+        }
       }
     }
-    return { etiquetas, envios: validos.length, cancelados: pedidos.length - validos.length }
+    return { etiquetas, envios, cancelados: pedidos.length - validos.length }
   }
 
   function documento(etiquetas) {
@@ -236,5 +248,5 @@ const Etiquetas = (() => {
     })
   }
 
-  return { construir, documento, assets, imprimir, PRODUCTOS_POR_ETIQUETA }
+  return { construir, etiquetasPorPedido, documento, assets, imprimir, PRODUCTOS_POR_ETIQUETA }
 })()

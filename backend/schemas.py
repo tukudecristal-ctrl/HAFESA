@@ -272,6 +272,19 @@ class PedidoEstadoUpdate(BaseModel):
     observacion: Optional[str] = None
 
 
+class EmpacarLoteInput(BaseModel):
+    pedido_ids: list[int]
+
+    @field_validator("pedido_ids")
+    @classmethod
+    def validar_ids(cls, v):
+        if not v:
+            raise ValueError("Debe indicar al menos un pedido")
+        if len(v) > 500:
+            raise ValueError("Máximo 500 pedidos por operación")
+        return list(dict.fromkeys(v))
+
+
 class PedidoOut(BaseModel):
     id: int
     empresa_id: int
